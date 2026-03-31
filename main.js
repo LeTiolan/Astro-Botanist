@@ -24,27 +24,27 @@ const ENGINE = {
     camera: null,
     renderer: null,
     clock: new THREE.Clock(),
-    state: 'START', // START, PLAY, WIN
-    keys: { w: false, s: false, space: false, spaceLocked: false }
-        mouse: { isDown: false, lastX: 0, lastY: 0 },
+    state: 'START', // START, PLAY, WIN, OVER
+    keys: { w: false, s: false, space: false, spaceLocked: false },
+    // NEW: Mouse and Camera tracking
+    mouse: { isDown: false, lastX: 0, lastY: 0 },
     camTarget: { theta: Math.PI/2, phi: Math.PI/3, radius: 100 },
     camCurrent: { theta: Math.PI/2, phi: Math.PI/3, radius: 100 }
 };
 
-
 const PLAYER = {
     mesh: null,
     orbitAngle: 0,
-    altitude: 50,       // Distance from center of planet
-    velocity: 5.5,      // Tangential velocity
+    altitude: 50,
+    velocity: 5.5,
     payloads: CONFIG.maxPayloads,
-    trail: null         // Visual orbit path
-        canLock: false,
+    trail: null,
+    // NEW: Orbital Lock tracking
+    canLock: false,
     isLocked: false,
     orbitAxis: new THREE.Vector3(),
     angularVelocity: 0
 };
-
 
 const WORLD = {
     group: new THREE.Group(),
@@ -64,12 +64,13 @@ const UI = {
         hud: document.getElementById('hud-active'),
         win: document.getElementById('menu-win')
     },
-    buttons: {
+  buttons: {
         play: document.getElementById('btn-play'),
         lore: document.getElementById('btn-lore'),
         closeLore: document.getElementById('btn-close-lore'),
         fire: document.getElementById('btn-fire'),
-        restart: document.getElementById('btn-restart')
+        restart: document.getElementById('btn-restart'),
+        lock: document.getElementById('btn-lock')
     },
     bars: {
         atmo: document.getElementById('bar-atmo'),
@@ -82,7 +83,7 @@ const UI = {
         alt: document.getElementById('txt-alt')
     },
     
-    init() {
+   init() {
         // Bind Menu Interactions
         this.buttons.play.addEventListener('click', () => {
             this.switchScreen('hud');
@@ -99,6 +100,17 @@ const UI = {
         
         this.buttons.restart.addEventListener('click', () => {
             location.reload(); // Hard reset for prototype
+        });
+
+        // --- NEW: Orbital Lock Listeners ---
+        this.buttons.lock.addEventListener('click', () => {
+            if (typeof toggleOrbitLock === "function") toggleOrbitLock();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'l') {
+                if (typeof toggleOrbitLock === "function") toggleOrbitLock();
+            }
         });
 
         // Touch/Mouse binding for the fire button
@@ -330,6 +342,7 @@ function buildPlayer() {
 }
 // --- 7. INPUT HANDLING ---
 function bindInputs() {
+    // Keyboard Controls
     document.addEventListener('keydown', (e) => {
         if (e.key.toLowerCase() === 'w') ENGINE.keys.w = true;
         if (e.key.toLowerCase() === 's') ENGINE.keys.s = true;
@@ -349,6 +362,39 @@ function bindInputs() {
             ENGINE.keys.space = false;
             ENGINE.keys.spaceLocked = false;
         }
+    });
+
+    // --- NEW: Soft Mouse Camera Controls ---
+    document.addEventListener('mousedown', (e) => {
+        // Only allow camera drag if clicking on the background, not UI
+        if (e.target.tagName !== 'BUTTON' && !e.target.closest('.glass-panel')) {
+            ENGINE.mouse.isDown = true;
+            ENGINE.mouse.lastX = e.clientX;
+            ENGINE.mouse.lastY = e.clientY;
+        }
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!ENGINE.mouse.isDown || ENGINE.state !== 'PLAY') return;
+        
+        const dx = e.clientX - ENGINE.mouse.lastX;
+        const dy = e.clientY - ENGINE.mouse.lastY;
+        ENGINE.mouse.lastX = e.clientX;
+        ENGINE.mouse.lastY = e.clientY;
+        
+        // Rotate horizontally
+        ENGINE.camTarget.theta -= dx * 0.005;
+        // Rotate vertically (clamped to prevent flipping upside down)
+        ENGINE.camTarget.phi = Math.max(0.1, Math.min(Math.PI - 0.1, ENGINE.camTarget.phi - dy * 0.005));
+    });
+    
+    document.addEventListener('mouseup', () => ENGINE.mouse.isDown = false);
+    
+    // Zoom in/out with scroll wheel
+    document.addEventListener('wheel', (e) => {
+        if (ENGINE.state !== 'PLAY') return;
+        // Clamp zoom distance between 40 and 250
+        ENGINE.camTarget.radius = Math.max(40, Math.min(250, ENGINE.camTarget.radius + e.deltaY * 0.1));
     });
 }
 

@@ -399,89 +399,136 @@ function bindInputs() {
 }
 
 // --- 8. ORBITAL PHYSICS ENGINE ---
-// We use a realistic Newtonian physics model for the ship.
 const SHIP_STATE = {
-    pos: new THREE.Vector3(0, CONFIG.planetRadius + 40, 0), // Start at altitude 40
-    vel: new THREE.Vector3(CONFIG.gravity / Math.sqrt(CONFIG.planetRadius + 40) * 0.15, 0, 0) // Initial tangential velocity
+    pos: new THREE.Vector3(0, CONFIG.planetRadius + 40, 0),
+    vel: new THREE.Vector3(CONFIG.gravity / Math.sqrt(CONFIG.planetRadius + 40) * 0.15, 0, 0)
 };
+
+function toggleOrbitLock() {
+    if (!PLAYER.canLock && !PLAYER.isLocked) return; 
+    
+    PLAYER.isLocked = !PLAYER.isLocked;
+    const btn = document.getElementById('btn-lock');
+    
+    if (PLAYER.isLocked) {
+        btn.classList.add('btn-locked');
+        btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
+        
+        // Calculate Perfect Orbit Parameters
+        const radius = SHIP_STATE.pos.length();
+        PLAYER.angularVelocity = SHIP_STATE.vel.length() / radius;
+        // Find the perpendicular axis of rotation
+        PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
+        
+        // Zero out erratic velocities to snap it perfectly to a circle
+        SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(SHIP_STATE.vel.length()));
+        
+    } else {
+        btn.classList.remove('btn-locked');
+        btn.innerHTML = '<span>LOCK ORBIT (L)</span>';
+    }
+}
 
 function updateShipPhysics(dt) {
     if (ENGINE.state !== 'PLAY') return;
 
-    // 1. Calculate Gravity Acceleration
-    // a = - (GM / r^2) * r_hat
     const distSq = SHIP_STATE.pos.lengthSq();
     const dist = Math.sqrt(distSq);
     PLAYER.altitude = dist;
 
-    const gravityForce = CONFIG.gravity / distSq;
-    const gravityDir = SHIP_STATE.pos.clone().normalize().negate();
-    const acceleration = gravityDir.clone().multiplyScalar(gravityForce);
+    if (PLAYER.isLocked) {
+        // ON-RAILS PARAMETRIC MATH
+        SHIP_STATE.pos.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);
+        SHIP_STATE.vel.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);
+        PLAYER.velocity = SHIP_STATE.vel.length();
+        
+        PLAYER.trail.visible = false; // Hide trail while locked
+        
+        const statusTxt = document.getElementById('txt-orbit-status');
+        if (statusTxt) {
+            statusTxt.innerText = "LOCKED";
+            statusTxt.style.color = "var(--neon-green)";
+        }
+        
+    } else {
+        // FREE FLIGHT NEWTONIAN MATH
+        PLAYER.trail.visible = true;
+        const gravityForce = CONFIG.gravity / distSq;
+        const gravityDir = SHIP_STATE.pos.clone().normalize().negate();
+        const acceleration = gravityDir.clone().multiplyScalar(gravityForce);
 
-    // 2. Handle Player Thrust (Prograde / Retrograde)
-    const progradeDir = SHIP_STATE.vel.clone().normalize();
-    const thrustPower = 15.0; // Acceleration from engines
+        const progradeDir = SHIP_STATE.vel.clone().normalize();
+        const thrustPower = 15.0;
 
-    let isThrusting = false;
-    if (ENGINE.keys.w) {
-        acceleration.add(progradeDir.clone().multiplyScalar(thrustPower));
-        isThrusting = true;
-        spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone().negate());
+        if (ENGINE.keys.w) {
+            acceleration.add(progradeDir.clone().multiplyScalar(thrustPower));
+            spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone().negate());
+        }
+        if (ENGINE.keys.s) {
+            acceleration.add(progradeDir.clone().multiplyScalar(-thrustPower));
+            spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone());
+        }
+
+        SHIP_STATE.vel.add(acceleration.multiplyScalar(dt));
+        SHIP_STATE.pos.add(SHIP_STATE.vel.clone().multiplyScalar(dt));
+        PLAYER.velocity = SHIP_STATE.vel.length();
+
+        updatePredictiveTrail();
     }
-    if (ENGINE.keys.s) {
-        acceleration.add(progradeDir.clone().multiplyScalar(-thrustPower));
-        isThrusting = true;
-        spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone());
-    }
 
-    // 3. Apply Euler Integration
-    SHIP_STATE.vel.add(acceleration.multiplyScalar(dt));
-    SHIP_STATE.pos.add(SHIP_STATE.vel.clone().multiplyScalar(dt));
-
-    PLAYER.velocity = SHIP_STATE.vel.length();
-
-    // 4. Update 3D Mesh Position and Rotation
+    // Update 3D Mesh
     PLAYER.mesh.position.copy(SHIP_STATE.pos);
-    
-    // Look in the direction of travel, with "up" pointing away from the planet
     const up = SHIP_STATE.pos.clone().normalize();
     const lookTarget = SHIP_STATE.pos.clone().add(SHIP_STATE.vel);
     const mtx = new THREE.Matrix4().lookAt(SHIP_STATE.pos, lookTarget, up);
     PLAYER.mesh.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(mtx), 0.1);
 
-    // 5. Calculate and Draw Predictive Orbit Trail
-    updatePredictiveTrail();
+    // Update Soft Mouse Camera
+    ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
+    ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
+    ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
 
-    // 6. Camera Follow (Smooth Spring)
-    const camOffset = up.clone().multiplyScalar(30).add(progradeDir.clone().multiplyScalar(-40));
-    const targetCamPos = SHIP_STATE.pos.clone().add(camOffset);
-    ENGINE.camera.position.lerp(targetCamPos, CONFIG.cameraSmooth);
+    // Convert Spherical to Cartesian for Camera
+    const cx = SHIP_STATE.pos.x + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
+    const cy = SHIP_STATE.pos.y + ENGINE.camCurrent.radius * Math.cos(ENGINE.camCurrent.phi);
+    const cz = SHIP_STATE.pos.z + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
+
+    ENGINE.camera.position.set(cx, cy, cz);
     ENGINE.camera.lookAt(SHIP_STATE.pos);
 
-    // 7. Crash Detection
-    if (dist < CONFIG.planetRadius + 1) {
-        triggerGameOver("ORBIT DECAYED", "Ship collided with the planetary surface.", "var(--neon-purple)");
+    // Update Radar UI
+    const radarShip = document.getElementById('radar-ship');
+    if (radarShip) {
+        const radarScale = 75 / 150; 
+        radarShip.style.left = `calc(50% + ${SHIP_STATE.pos.x * radarScale}px)`;
+        radarShip.style.top = `calc(50% + ${SHIP_STATE.pos.z * radarScale}px)`;
     }
-    if (dist > 300) {
-        triggerGameOver("LOST IN SPACE", "Escaped planetary gravity well.", "var(--neon-purple)");
-    }
+
+    // Crash Detection
+    if (dist < CONFIG.planetRadius + 1) triggerGameOver("ORBIT DECAYED", "Ship collided with the planetary surface.", "var(--neon-purple)");
+    if (dist > 300) triggerGameOver("LOST IN SPACE", "Escaped planetary gravity well.", "var(--neon-purple)");
 }
 
 function updatePredictiveTrail() {
-    // Simulate future path without affecting real game state
     const simPos = SHIP_STATE.pos.clone();
     const simVel = SHIP_STATE.vel.clone();
     const points = [];
-    const simDt = 0.5; // Larger step for simulation performance
+    const simDt = 0.5; 
     
     let isStable = true;
+    let escapes = false;
 
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 300; i++) {
         points.push(simPos.clone());
         
         const rSq = simPos.lengthSq();
         if (rSq < (CONFIG.planetRadius * CONFIG.planetRadius)) {
-            isStable = false; // Orbit hits the ground
+            isStable = false; 
+            break;
+        }
+        if (rSq > 40000) { 
+            escapes = true;
+            isStable = false;
             break;
         }
 
@@ -492,15 +539,27 @@ function updatePredictiveTrail() {
 
     PLAYER.trail.geometry.setFromPoints(points);
     
-    // UI Feedback: Change trail color based on stability
+    // UI Feedback & Lock availability
+    const statusTxt = document.getElementById('txt-orbit-status');
+    const lockBtn = document.getElementById('btn-lock');
+
     if (!isStable) {
+        PLAYER.canLock = false;
+        if (lockBtn) lockBtn.classList.add('hidden');
         PLAYER.trail.material.color.setHex(CONFIG.orbitColors.retrograde);
+        if (statusTxt) {
+            statusTxt.innerText = escapes ? "ESCAPING" : "UNSTABLE";
+            statusTxt.style.color = "var(--neon-purple)";
+        }
         document.getElementById('hud-active').style.boxShadow = "inset 0 0 50px rgba(244, 63, 94, 0.2)";
-    } else if (ENGINE.keys.w) {
-        PLAYER.trail.material.color.setHex(CONFIG.orbitColors.prograde);
-        document.getElementById('hud-active').style.boxShadow = "inset 0 0 50px rgba(56, 189, 248, 0.2)";
     } else {
+        PLAYER.canLock = true;
+        if (lockBtn) lockBtn.classList.remove('hidden');
         PLAYER.trail.material.color.setHex(CONFIG.orbitColors.stable);
+        if (statusTxt) {
+            statusTxt.innerText = "STABLE";
+            statusTxt.style.color = "var(--neon-blue)";
+        }
         document.getElementById('hud-active').style.boxShadow = "none";
     }
 }

@@ -504,22 +504,27 @@ function updateShipPhysics(dt) {
         updatePredictiveTrail();
     }
 
-    // --- ROBUST MESH ORIENTATION ---
+  // --- 1. ROBUST MESH ORIENTATION ---
     PLAYER.mesh.position.copy(SHIP_STATE.pos);
     const up = SHIP_STATE.pos.clone().normalize();
     const shipForward = SHIP_STATE.vel.clone().normalize();
     
-    // Safety check to prevent NaN crash if velocity reaches 0
+    // Safety check to prevent crashing if velocity hits 0
     if (shipForward.lengthSq() === 0) shipForward.set(1, 0, 0);
     
-    // Use a dummy object for safe Quaternion extraction
+    // Dummy object ensures the rocket always faces perfectly forward in 3D
     const dummyObj = new THREE.Object3D();
     dummyObj.position.copy(SHIP_STATE.pos);
     dummyObj.up.copy(up);
     dummyObj.lookAt(SHIP_STATE.pos.clone().add(shipForward.multiplyScalar(10)));
     PLAYER.mesh.quaternion.slerp(dummyObj.quaternion, 0.15);
 
-    // --- FOOLPROOF CHASE CAMERA ---
+    // --- 2. TIGHT 3D CHASE CAMERA ---
+    // Force the camera closer so the rocket is actually visible in 3D
+    if (ENGINE.camTarget.radius > 25) {
+        ENGINE.camTarget.radius = 12; // Pull the camera right up behind the thrusters
+    }
+
     ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
     ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
     ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
@@ -531,14 +536,15 @@ function updateShipPhysics(dt) {
     const yOffset = r * Math.cos(ENGINE.camCurrent.phi);
     const zOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
 
-    // Attach camera directly relative to ship
+    // Position camera directly relative to the rocket's hull
     const idealCamPos = SHIP_STATE.pos.clone()
         .add(shipRight.multiplyScalar(xOffset))
         .add(up.multiplyScalar(yOffset))
         .add(shipForward.multiplyScalar(-zOffset)); 
 
-    // Force tighter lerp, and force immediate lookAt
+    // Smooth spring follow
     ENGINE.camera.position.lerp(idealCamPos, 0.25); 
+    // Hard-lock the camera's eyes right onto the rocket
     ENGINE.camera.lookAt(SHIP_STATE.pos);
     // ---------------------------------
     // Update Radar UI

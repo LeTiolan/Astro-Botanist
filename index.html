@@ -2,22 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="A procedural space-farming prototype.">
+    <meta name="description" content="Astro-Botanist game interface">
     <title>Astro-Botanist: Deep Core</title>
     <link rel="stylesheet" href="style.css">
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-            }
-        }
-    </script>
 </head>
 <body>
-    <div id="ui-layer">
-        <main id="menu-screen" class="screen active">
+    <main id="ui-layer">
+        <section id="menu-screen" class="screen active">
             <h1>ASTRO-BOTANIST</h1>
             <p>Project: Deep Core Genesis</p>
             <div class="menu-box">
@@ -25,7 +17,7 @@
                 <p><strong>WARNING:</strong> Planetary gravity is unstable.</p>
             </div>
             <button id="btn-start" type="button">INITIATE SEQUENCE</button>
-        </main>
+        </section>
 
         <aside id="hud-screen" class="screen" aria-hidden="true">
             <div class="hud-top">
@@ -56,7 +48,7 @@
             <p id="end-desc">Ecosystem stabilized.</p>
             <button id="btn-restart" type="button">REBOOT SYSTEMS</button>
         </section>
-    </div>
+    </main>
     <script type="module" src="main.js"></script>
 </body>
 </html>

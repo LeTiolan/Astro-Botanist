@@ -3,20 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro-Botanist V2</title>
+    <title>Astro-Botanist: Serenity</title>
     <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
 </head>
 <body>
     <div id="ui">
         <h1>Astro-Botanist</h1>
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <p id="progress-text">Terraformed: 0%</p>
+        <hr>
         <p><strong>Click canvas</strong> to start audio.</p>
-        <p><strong>W / S / A / D</strong> to orbit.</p>
-        <hr style="border-color: #333; margin: 10px 0;">
-        <p><strong>1</strong>: Equip Seeds (Spacebar to plant)</p>
-        <p><strong>2</strong>: Equip Water (Spacebar to hydrate soil)</p>
-        <p><strong>3</strong>: Equip Gas (Spacebar to build atmosphere)</p>
-        <p style="color: #4ade80; margin-top: 10px;" id="current-tool">Current Tool: SEEDS</p>
+        <p><strong>W / S / A / D</strong> to gently orbit.</p>
+        <p><strong>SPACEBAR</strong> to cultivate.</p>
+        <p id="current-tool" class="tool-active">Tool: BIOLUMINESCENT SEED</p>
     </div>
+    
+    <div id="win-screen">
+        <h2>Ecosystem Restored</h2>
+        <p>The asteroid is breathing again.</p>
+    </div>
+
     <script type="module" src="main.js"></script>
 </body>
 </html>

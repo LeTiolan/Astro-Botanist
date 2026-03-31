@@ -414,13 +414,9 @@ function toggleOrbitLock() {
         btn.classList.add('btn-locked');
         btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
         
-        // Calculate Perfect Orbit Parameters
         const radius = SHIP_STATE.pos.length();
         PLAYER.angularVelocity = SHIP_STATE.vel.length() / radius;
-        // Find the perpendicular axis of rotation
         PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
-        
-        // Zero out erratic velocities to snap it perfectly to a circle
         SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(SHIP_STATE.vel.length()));
         
     } else {
@@ -432,8 +428,7 @@ function toggleOrbitLock() {
 function updateShipPhysics(dt) {
     if (ENGINE.state !== 'PLAY') return;
 
-    // --- NEW: ONE-TIME SPAWN LOCK SETUP ---
-    // This forces the ship perfectly onto the rails the moment the game starts
+    // --- ONE-TIME SPAWN SETUP ---
     if (!PLAYER.hasSpawned) {
         PLAYER.hasSpawned = true;
         const radius = SHIP_STATE.pos.length();
@@ -444,27 +439,116 @@ function updateShipPhysics(dt) {
         PLAYER.isLocked = true;
         PLAYER.canLock = true;
         
-        // Sync the UI Button to show we are locked
         const btn = document.getElementById('btn-lock');
         if (btn) {
             btn.classList.add('btn-locked');
             btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
         }
-        // SNAP CAMERA TO SHIP
-// SNAP CAMERA TO SHIP (Matched to new zoom distance)
+
+        // SNAP CAMERA TO SHIP (Matched to new zoom distance)
         const startUp = SHIP_STATE.pos.clone().normalize();
         const startFwd = SHIP_STATE.vel.clone().normalize();
         if (startFwd.lengthSq() === 0) startFwd.set(1, 0, 0); // Failsafe
         ENGINE.camera.position.copy(SHIP_STATE.pos.clone().add(startUp.multiplyScalar(6)).add(startFwd.multiplyScalar(-19)));
         ENGINE.camera.lookAt(SHIP_STATE.pos);
     }
-    // --------------------------------------
 
     const distSq = SHIP_STATE.pos.lengthSq();
     const dist = Math.sqrt(distSq);
     PLAYER.altitude = dist;
 
     if (PLAYER.isLocked) {
+        SHIP_STATE.pos.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);
+        SHIP_STATE.vel.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);
+        PLAYER.velocity = SHIP_STATE.vel.length();
+        
+        PLAYER.trail.visible = false; 
+        
+        const statusTxt = document.getElementById('txt-orbit-status');
+        if (statusTxt) {
+            statusTxt.innerText = "LOCKED";
+            statusTxt.style.color = "var(--neon-green)";
+        }
+        
+    } else {
+        PLAYER.trail.visible = true;
+        const gravityForce = CONFIG.gravity / distSq;
+        const gravityDir = SHIP_STATE.pos.clone().normalize().negate();
+        const acceleration = gravityDir.clone().multiplyScalar(gravityForce);
+
+        const progradeDir = SHIP_STATE.vel.clone().normalize();
+        const thrustPower = 15.0;
+
+        if (ENGINE.keys.w) {
+            acceleration.add(progradeDir.clone().multiplyScalar(thrustPower));
+            spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone().negate());
+        }
+        if (ENGINE.keys.s) {
+            acceleration.add(progradeDir.clone().multiplyScalar(-thrustPower));
+            spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone());
+        }
+
+        SHIP_STATE.vel.add(acceleration.multiplyScalar(dt));
+        SHIP_STATE.pos.add(SHIP_STATE.vel.clone().multiplyScalar(dt));
+        PLAYER.velocity = SHIP_STATE.vel.length();
+
+        updatePredictiveTrail();
+    }
+
+    // --- 1. ROBUST MESH ORIENTATION ---
+    PLAYER.mesh.position.copy(SHIP_STATE.pos);
+    const up = SHIP_STATE.pos.clone().normalize();
+    const shipForward = SHIP_STATE.vel.clone().normalize();
+    
+    // Safety check to prevent crashing if velocity hits 0
+    if (shipForward.lengthSq() === 0) shipForward.set(1, 0, 0);
+    
+    // Dummy object ensures the rocket always faces perfectly forward in 3D
+    const dummyObj = new THREE.Object3D();
+    dummyObj.position.copy(SHIP_STATE.pos);
+    dummyObj.up.copy(up);
+    
+    // SAFE: Using .clone() before multiplyScalar!
+    dummyObj.lookAt(SHIP_STATE.pos.clone().add(shipForward.clone().multiplyScalar(10)));
+    PLAYER.mesh.quaternion.slerp(dummyObj.quaternion, 0.15);
+
+    // --- 2. TIGHT 3D CHASE CAMERA ---
+    if (ENGINE.camTarget.radius > 15) {
+        ENGINE.camTarget.radius = 12; 
+    }
+
+    ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
+    ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
+    ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
+
+    const shipRight = shipForward.clone().cross(up).normalize();
+
+    const r = ENGINE.camCurrent.radius;
+    const xOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
+    const yOffset = r * Math.cos(ENGINE.camCurrent.phi);
+    const zOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
+
+    // SAFE: Using .clone() on all vectors before multiplying them!
+    const idealCamPos = SHIP_STATE.pos.clone()
+        .add(shipRight.clone().multiplyScalar(xOffset))
+        .add(up.clone().multiplyScalar(yOffset))
+        .add(shipForward.clone().multiplyScalar(-zOffset)); 
+
+    // Smooth spring follow
+    ENGINE.camera.position.lerp(idealCamPos, 0.25); 
+    ENGINE.camera.lookAt(SHIP_STATE.pos);
+    // ---------------------------------
+
+    const radarShip = document.getElementById('radar-ship');
+    if (radarShip) {
+        const radarScale = 75 / 150; 
+        radarShip.style.left = `calc(50% + ${SHIP_STATE.pos.x * radarScale}px)`;
+        radarShip.style.top = `calc(50% + ${SHIP_STATE.pos.z * radarScale}px)`;
+    }
+
+    if (dist < CONFIG.planetRadius + 1) triggerGameOver("ORBIT DECAYED", "Ship collided with the planetary surface.", "var(--neon-purple)");
+    if (dist > 300) triggerGameOver("LOST IN SPACE", "Escaped planetary gravity well.", "var(--neon-purple)");
+}
         // ON-RAILS PARAMETRIC MATH
         SHIP_STATE.pos.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);
         SHIP_STATE.vel.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);

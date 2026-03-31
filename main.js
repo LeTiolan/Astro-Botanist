@@ -319,3 +319,346 @@ function buildPlayer() {
     PLAYER.trail = new THREE.LineLoop(trailGeo, trailMat);
     ENGINE.scene.add(PLAYER.trail);
 }
+// --- 7. INPUT HANDLING ---
+function bindInputs() {
+    document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'w') ENGINE.keys.w = true;
+        if (e.key.toLowerCase() === 's') ENGINE.keys.s = true;
+        if (e.code === 'Space') {
+            ENGINE.keys.space = true;
+            if (ENGINE.state === 'START') {
+                UI.switchScreen('hud');
+                ENGINE.state = 'PLAY';
+            }
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.key.toLowerCase() === 'w') ENGINE.keys.w = false;
+        if (e.key.toLowerCase() === 's') ENGINE.keys.s = false;
+        if (e.code === 'Space') {
+            ENGINE.keys.space = false;
+            ENGINE.keys.spaceLocked = false;
+        }
+    });
+}
+
+// --- 8. ORBITAL PHYSICS ENGINE ---
+// We use a realistic Newtonian physics model for the ship.
+const SHIP_STATE = {
+    pos: new THREE.Vector3(0, CONFIG.planetRadius + 40, 0), // Start at altitude 40
+    vel: new THREE.Vector3(CONFIG.gravity / Math.sqrt(CONFIG.planetRadius + 40) * 0.15, 0, 0) // Initial tangential velocity
+};
+
+function updateShipPhysics(dt) {
+    if (ENGINE.state !== 'PLAY') return;
+
+    // 1. Calculate Gravity Acceleration
+    // a = - (GM / r^2) * r_hat
+    const distSq = SHIP_STATE.pos.lengthSq();
+    const dist = Math.sqrt(distSq);
+    PLAYER.altitude = dist;
+
+    const gravityForce = CONFIG.gravity / distSq;
+    const gravityDir = SHIP_STATE.pos.clone().normalize().negate();
+    const acceleration = gravityDir.clone().multiplyScalar(gravityForce);
+
+    // 2. Handle Player Thrust (Prograde / Retrograde)
+    const progradeDir = SHIP_STATE.vel.clone().normalize();
+    const thrustPower = 15.0; // Acceleration from engines
+
+    let isThrusting = false;
+    if (ENGINE.keys.w) {
+        acceleration.add(progradeDir.clone().multiplyScalar(thrustPower));
+        isThrusting = true;
+        spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone().negate());
+    }
+    if (ENGINE.keys.s) {
+        acceleration.add(progradeDir.clone().multiplyScalar(-thrustPower));
+        isThrusting = true;
+        spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone());
+    }
+
+    // 3. Apply Euler Integration
+    SHIP_STATE.vel.add(acceleration.multiplyScalar(dt));
+    SHIP_STATE.pos.add(SHIP_STATE.vel.clone().multiplyScalar(dt));
+
+    PLAYER.velocity = SHIP_STATE.vel.length();
+
+    // 4. Update 3D Mesh Position and Rotation
+    PLAYER.mesh.position.copy(SHIP_STATE.pos);
+    
+    // Look in the direction of travel, with "up" pointing away from the planet
+    const up = SHIP_STATE.pos.clone().normalize();
+    const lookTarget = SHIP_STATE.pos.clone().add(SHIP_STATE.vel);
+    const mtx = new THREE.Matrix4().lookAt(SHIP_STATE.pos, lookTarget, up);
+    PLAYER.mesh.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(mtx), 0.1);
+
+    // 5. Calculate and Draw Predictive Orbit Trail
+    updatePredictiveTrail();
+
+    // 6. Camera Follow (Smooth Spring)
+    const camOffset = up.clone().multiplyScalar(30).add(progradeDir.clone().multiplyScalar(-40));
+    const targetCamPos = SHIP_STATE.pos.clone().add(camOffset);
+    ENGINE.camera.position.lerp(targetCamPos, CONFIG.cameraSmooth);
+    ENGINE.camera.lookAt(SHIP_STATE.pos);
+
+    // 7. Crash Detection
+    if (dist < CONFIG.planetRadius + 1) {
+        triggerGameOver("ORBIT DECAYED", "Ship collided with the planetary surface.", "var(--neon-purple)");
+    }
+    if (dist > 300) {
+        triggerGameOver("LOST IN SPACE", "Escaped planetary gravity well.", "var(--neon-purple)");
+    }
+}
+
+function updatePredictiveTrail() {
+    // Simulate future path without affecting real game state
+    const simPos = SHIP_STATE.pos.clone();
+    const simVel = SHIP_STATE.vel.clone();
+    const points = [];
+    const simDt = 0.5; // Larger step for simulation performance
+    
+    let isStable = true;
+
+    for (let i = 0; i < 200; i++) {
+        points.push(simPos.clone());
+        
+        const rSq = simPos.lengthSq();
+        if (rSq < (CONFIG.planetRadius * CONFIG.planetRadius)) {
+            isStable = false; // Orbit hits the ground
+            break;
+        }
+
+        const gAccel = simPos.clone().normalize().negate().multiplyScalar(CONFIG.gravity / rSq);
+        simVel.add(gAccel.multiplyScalar(simDt));
+        simPos.add(simVel.clone().multiplyScalar(simDt));
+    }
+
+    PLAYER.trail.geometry.setFromPoints(points);
+    
+    // UI Feedback: Change trail color based on stability
+    if (!isStable) {
+        PLAYER.trail.material.color.setHex(CONFIG.orbitColors.retrograde);
+        document.getElementById('hud-active').style.boxShadow = "inset 0 0 50px rgba(244, 63, 94, 0.2)";
+    } else if (ENGINE.keys.w) {
+        PLAYER.trail.material.color.setHex(CONFIG.orbitColors.prograde);
+        document.getElementById('hud-active').style.boxShadow = "inset 0 0 50px rgba(56, 189, 248, 0.2)";
+    } else {
+        PLAYER.trail.material.color.setHex(CONFIG.orbitColors.stable);
+        document.getElementById('hud-active').style.boxShadow = "none";
+    }
+}
+
+// --- 9. TERRA-SEED & PROJECTILE SYSTEM ---
+function handleShooting() {
+    if (ENGINE.keys.space && !ENGINE.keys.spaceLocked && ENGINE.state === 'PLAY' && PLAYER.payloads > 0) {
+        PLAYER.payloads--;
+        ENGINE.keys.spaceLocked = true; // Prevent rapid fire
+
+        // Spawn Projectile
+        const geo = new THREE.SphereGeometry(0.5, 8, 8);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
+        const mesh = new THREE.Mesh(geo, mat);
+        
+        mesh.position.copy(SHIP_STATE.pos);
+        
+        // Shoot "down" towards the planet, plus inherited orbital velocity
+        const downDir = SHIP_STATE.pos.clone().normalize().negate();
+        const shootVel = downDir.multiplyScalar(30).add(SHIP_STATE.vel);
+
+        ENGINE.scene.add(mesh);
+        WORLD.projectiles.push({ mesh, vel: shootVel, alive: true });
+    }
+}
+
+function updateProjectiles(dt) {
+    WORLD.projectiles.forEach(p => {
+        if (!p.alive) return;
+
+        // Simple gravity for projectiles
+        const distSq = p.mesh.position.lengthSq();
+        const gravityDir = p.mesh.position.clone().normalize().negate();
+        const gAccel = gravityDir.clone().multiplyScalar(CONFIG.gravity / distSq);
+        
+        p.vel.add(gAccel.multiplyScalar(dt));
+        p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
+
+        // Check impact with planet (approximate using radius)
+        if (p.mesh.position.length() <= CONFIG.planetRadius + 0.5) {
+            p.alive = false;
+            ENGINE.scene.remove(p.mesh);
+            
+            spawnTree(p.mesh.position.clone());
+            spawnImpactParticles(p.mesh.position.clone());
+            
+            WORLD.atmosphere += 2.5; // Increase atmosphere
+            if (WORLD.atmosphere >= CONFIG.atmoMax) {
+                triggerWin();
+            }
+        }
+    });
+
+    // Cleanup dead projectiles
+    WORLD.projectiles = WORLD.projectiles.filter(p => p.alive);
+}
+
+// --- 10. ENVIRONMENT & TERRAFORMING VISUALS ---
+function spawnTree(position) {
+    // Hyper-round, soft trees
+    const treeGroup = new THREE.Group();
+    
+    // Soft, bubbly canopy
+    const canopyGeo = new THREE.IcosahedronGeometry(1.5, 2); // High detail for roundness
+    const canopyMat = new THREE.MeshStandardMaterial({ 
+        color: 0x34d399, 
+        roughness: 0.4, 
+        metalness: 0.1,
+        emissive: 0x064e3b,
+        emissiveIntensity: 0.5
+    });
+    const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+    canopy.position.y = 1.0;
+    
+    treeGroup.add(canopy);
+    
+    // Align to surface normal
+    const normal = position.clone().normalize();
+    treeGroup.position.copy(position);
+    treeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), normal);
+    
+    // Add to planet so it rotates with it (if we add rotation later)
+    WORLD.group.add(treeGroup);
+    
+    // Pop-in animation scale setup
+    treeGroup.scale.set(0.01, 0.01, 0.01);
+    WORLD.trees.push(treeGroup);
+}
+
+function updateEnvironment(dt) {
+    // Soft rotation of the entire planetary body
+    WORLD.group.rotation.y += 0.02 * dt;
+    WORLD.group.rotation.z += 0.01 * dt;
+
+    // Fade in atmosphere visually based on progress
+    const atmoTargetOpacity = (WORLD.atmosphere / CONFIG.atmoMax) * 0.4;
+    WORLD.atmoMesh.material.opacity += (atmoTargetOpacity - WORLD.atmoMesh.material.opacity) * 0.05;
+
+    // Animate Tree Growth (Bouncy scaling)
+    WORLD.trees.forEach(tree => {
+        if (tree.scale.x < 1.0) {
+            const growth = dt * 2.0;
+            tree.scale.addScalar(growth);
+            // Bouncy overshoot logic
+            if (tree.scale.x > 1.2) tree.scale.setScalar(1.0); 
+        }
+    });
+
+    // Update Particles
+    for (let i = WORLD.particles.length - 1; i >= 0; i--) {
+        const p = WORLD.particles[i];
+        p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
+        p.life -= dt;
+        
+        // Soft fade and shrink
+        const scale = Math.max(0, p.life / p.maxLife);
+        p.mesh.scale.setScalar(scale);
+        
+        if (p.life <= 0) {
+            ENGINE.scene.remove(p.mesh);
+            WORLD.particles.splice(i, 1);
+        }
+    }
+}
+
+// --- 11. PARTICLE EFFECTS ---
+function spawnEngineParticles(pos, dir) {
+    // Soft round particles
+    const geo = new THREE.SphereGeometry(0.3, 4, 4);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
+    const mesh = new THREE.Mesh(geo, mat);
+    
+    mesh.position.copy(pos).add(dir.clone().multiplyScalar(2)); // Spawn behind ship
+    
+    const spread = new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), (Math.random()-0.5)).multiplyScalar(2);
+    const vel = dir.clone().multiplyScalar(10).add(spread);
+    
+    ENGINE.scene.add(mesh);
+    WORLD.particles.push({ mesh, vel, life: 0.5, maxLife: 0.5 });
+}
+
+function spawnImpactParticles(pos) {
+    const geo = new THREE.SphereGeometry(0.4, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
+    
+    for (let i = 0; i < 8; i++) {
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        
+        const normal = pos.clone().normalize();
+        const spread = new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10);
+        // Blast outward from normal
+        const vel = normal.multiplyScalar(5).add(spread);
+        
+        ENGINE.scene.add(mesh);
+        WORLD.particles.push({ mesh, vel, life: 1.0, maxLife: 1.0 });
+    }
+}
+
+// --- 12. GAME STATE MANAGEMENT ---
+function triggerGameOver(title, desc, color) {
+    if (ENGINE.state === 'WIN') return; // Don't overwrite win
+    ENGINE.state = 'OVER';
+    
+    const winScreen = UI.screens.win;
+    winScreen.querySelector('.success-text').innerText = title;
+    winScreen.querySelector('.success-text').style.background = `linear-gradient(to right, #fff, ${color})`;
+    winScreen.querySelector('.success-text').style.webkitBackgroundClip = "text";
+    winScreen.querySelector('p').innerText = desc;
+    
+    UI.switchScreen('win');
+}
+
+function triggerWin() {
+    ENGINE.state = 'WIN';
+    UI.switchScreen('win');
+    
+    // Zoom camera out for a cinematic shot
+    const zoomOut = setInterval(() => {
+        ENGINE.camera.position.lerp(new THREE.Vector3(0, 0, 150), 0.02);
+        ENGINE.camera.lookAt(0,0,0);
+    }, 16);
+    setTimeout(() => clearInterval(zoomOut), 5000);
+}
+
+// --- 13. MAIN RENDER LOOP ---
+function animate() {
+    requestAnimationFrame(animate);
+    
+    const dt = Math.min(ENGINE.clock.getDelta(), 0.1); // Cap delta to prevent physics explosions on lag
+
+    if (ENGINE.state === 'START') {
+        // Idle cinematic camera orbiting the planet
+        const time = ENGINE.clock.getElapsedTime();
+        ENGINE.camera.position.set(Math.sin(time*0.1)*80, 20, Math.cos(time*0.1)*80);
+        ENGINE.camera.lookAt(0,0,0);
+        WORLD.group.rotation.y += 0.05 * dt;
+    } 
+    else if (ENGINE.state === 'PLAY') {
+        updateShipPhysics(dt);
+        handleShooting();
+        updateProjectiles(dt);
+        UI.updateHUD();
+        
+        // Check loss condition for running out of payloads
+        if (PLAYER.payloads <= 0 && WORLD.projectiles.length === 0 && WORLD.atmosphere < CONFIG.atmoMax) {
+            triggerGameOver("MISSION FAILED", "Out of terra-seeds. Biosphere collapsed.", "var(--neon-purple)");
+        }
+    }
+
+    updateEnvironment(dt);
+    ENGINE.renderer.render(ENGINE.scene, ENGINE.camera);
+}
+
+// FIRE IT UP
+init();

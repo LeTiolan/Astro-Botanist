@@ -172,3 +172,32 @@ body, html {
 h1 { font-size: 2.5rem; letter-spacing: 4px; margin-bottom: 10px; background: linear-gradient(to right, #fff, var(--neon-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .subtitle { color: var(--text-dim); margin-bottom: 30px; letter-spacing: 1px; }
 .success-text { background: linear-gradient(to right, #fff, var(--neon-green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+/* --- RADAR MAP & LOCK UI --- */
+.radar-container { padding: 15px; border-radius: 50%; }
+.radar-screen { 
+    width: 150px; height: 150px; 
+    border-radius: 50%; 
+    background: radial-gradient(circle at center, rgba(56, 189, 248, 0.1), rgba(0,0,0,0.8));
+    border: 2px solid var(--border-glass);
+    position: relative; 
+}
+
+.radar-planet {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 30px; height: 30px; background: var(--core-dark);
+    border: 2px solid var(--neon-blue); border-radius: 50%;
+    box-shadow: 0 0 15px var(--neon-blue);
+}
+
+.radar-blip {
+    position: absolute; width: 6px; height: 6px; background: var(--text-main);
+    border-radius: 50%; box-shadow: 0 0 10px #fff;
+    transform: translate(-50%, -50%); z-index: 10;
+    transition: left 0.1s linear, top 0.1s linear;
+}
+
+.btn-locked {
+    background: linear-gradient(135deg, var(--neon-green), #064e3b) !important;
+    color: white !important; border: none;
+    box-shadow: 0 10px 20px rgba(52, 211, 153, 0.4);
+}

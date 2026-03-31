@@ -509,35 +509,30 @@ function updateShipPhysics(dt) {
     const mtx = new THREE.Matrix4().lookAt(SHIP_STATE.pos, lookTarget, up);
     PLAYER.mesh.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(mtx), 0.1);
 
-// --- NEW: LOOSE CARTOON CHASE CAMERA ---
+// --- TIGHT CARTOON CHASE CAMERA ---
     ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
     ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
     ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
 
-    // 1. Get the Ship's Local Directions
     const shipUp = SHIP_STATE.pos.clone().normalize();
     const shipForward = SHIP_STATE.vel.clone().normalize();
     const shipRight = shipForward.clone().cross(shipUp).normalize();
 
-    // 2. Calculate spherical offsets based on your mouse movements
     const r = ENGINE.camCurrent.radius;
     const xOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
     const yOffset = r * Math.cos(ENGINE.camCurrent.phi);
     const zOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
 
-    // 3. Attach the camera relative to the ship's orientation
+    // Calculate ideal position relative to the ship, not the planet
     const idealCamPos = SHIP_STATE.pos.clone()
         .add(shipRight.multiplyScalar(xOffset))
         .add(shipUp.multiplyScalar(yOffset))
-        .add(shipForward.multiplyScalar(-zOffset)); // Negative Z puts camera trailing behind
+        .add(shipForward.multiplyScalar(-zOffset)); 
 
-    // 4. Loose rubber-band spring
-    ENGINE.camera.position.lerp(idealCamPos, 0.08);
-
-    // 5. Hard focus directly on the ship
+    // Rubber-band spring follows the ship quickly but loosely
+    ENGINE.camera.position.lerp(idealCamPos, 0.15); 
     ENGINE.camera.lookAt(SHIP_STATE.pos);
     // ---------------------------------
-
     // Update Radar UI
     const radarShip = document.getElementById('radar-ship');
     if (radarShip) {

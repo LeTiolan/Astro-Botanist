@@ -28,8 +28,8 @@ const ENGINE = {
     keys: { w: false, s: false, space: false, spaceLocked: false },
     // NEW: Mouse and Camera tracking
     mouse: { isDown: false, lastX: 0, lastY: 0 },
-    camTarget: { theta: Math.PI/2, phi: Math.PI/3, radius: 100 },
-    camCurrent: { theta: Math.PI/2, phi: Math.PI/3, radius: 100 }
+ camTarget: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 40 },
+    camCurrent: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 40 }
 };
 
 const PLAYER = {
@@ -391,10 +391,10 @@ function bindInputs() {
     document.addEventListener('mouseup', () => ENGINE.mouse.isDown = false);
     
     // Zoom in/out with scroll wheel
-    document.addEventListener('wheel', (e) => {
+document.addEventListener('wheel', (e) => {
         if (ENGINE.state !== 'PLAY') return;
-        // Clamp zoom distance between 40 and 250
-        ENGINE.camTarget.radius = Math.max(40, Math.min(250, ENGINE.camTarget.radius + e.deltaY * 0.1));
+        // Allow zooming in as close as 15 units
+        ENGINE.camTarget.radius = Math.max(15, Math.min(150, ENGINE.camTarget.radius + e.deltaY * 0.1));
     });
 }
 
@@ -450,6 +450,11 @@ function updateShipPhysics(dt) {
             btn.classList.add('btn-locked');
             btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
         }
+        // SNAP CAMERA TO SHIP
+        const startUp = SHIP_STATE.pos.clone().normalize();
+        const startFwd = SHIP_STATE.vel.clone().normalize();
+        ENGINE.camera.position.copy(SHIP_STATE.pos.clone().add(startUp.multiplyScalar(10)).add(startFwd.multiplyScalar(-30)));
+        ENGINE.camera.lookAt(SHIP_STATE.pos);
     }
     // --------------------------------------
 

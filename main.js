@@ -28,8 +28,8 @@ const ENGINE = {
     keys: { w: false, s: false, space: false, spaceLocked: false },
     // NEW: Mouse and Camera tracking
     mouse: { isDown: false, lastX: 0, lastY: 0 },
- camTarget: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 40 },
-    camCurrent: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 40 }
+ camTarget: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 20 },
+    camCurrent: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 20 }
 };
 
 const PLAYER = {
@@ -451,9 +451,11 @@ function updateShipPhysics(dt) {
             btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
         }
         // SNAP CAMERA TO SHIP
+// SNAP CAMERA TO SHIP (Matched to new zoom distance)
         const startUp = SHIP_STATE.pos.clone().normalize();
         const startFwd = SHIP_STATE.vel.clone().normalize();
-        ENGINE.camera.position.copy(SHIP_STATE.pos.clone().add(startUp.multiplyScalar(10)).add(startFwd.multiplyScalar(-30)));
+        if (startFwd.lengthSq() === 0) startFwd.set(1, 0, 0); // Failsafe
+        ENGINE.camera.position.copy(SHIP_STATE.pos.clone().add(startUp.multiplyScalar(6)).add(startFwd.multiplyScalar(-19)));
         ENGINE.camera.lookAt(SHIP_STATE.pos);
     }
     // --------------------------------------
@@ -502,35 +504,41 @@ function updateShipPhysics(dt) {
         updatePredictiveTrail();
     }
 
-    // Update 3D Mesh
+    // --- ROBUST MESH ORIENTATION ---
     PLAYER.mesh.position.copy(SHIP_STATE.pos);
     const up = SHIP_STATE.pos.clone().normalize();
-    const lookTarget = SHIP_STATE.pos.clone().add(SHIP_STATE.vel);
-    const mtx = new THREE.Matrix4().lookAt(SHIP_STATE.pos, lookTarget, up);
-    PLAYER.mesh.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(mtx), 0.1);
+    const shipForward = SHIP_STATE.vel.clone().normalize();
+    
+    // Safety check to prevent NaN crash if velocity reaches 0
+    if (shipForward.lengthSq() === 0) shipForward.set(1, 0, 0);
+    
+    // Use a dummy object for safe Quaternion extraction
+    const dummyObj = new THREE.Object3D();
+    dummyObj.position.copy(SHIP_STATE.pos);
+    dummyObj.up.copy(up);
+    dummyObj.lookAt(SHIP_STATE.pos.clone().add(shipForward.multiplyScalar(10)));
+    PLAYER.mesh.quaternion.slerp(dummyObj.quaternion, 0.15);
 
-// --- TIGHT CARTOON CHASE CAMERA ---
+    // --- FOOLPROOF CHASE CAMERA ---
     ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
     ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
     ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
 
-    const shipUp = SHIP_STATE.pos.clone().normalize();
-    const shipForward = SHIP_STATE.vel.clone().normalize();
-    const shipRight = shipForward.clone().cross(shipUp).normalize();
+    const shipRight = shipForward.clone().cross(up).normalize();
 
     const r = ENGINE.camCurrent.radius;
     const xOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
     const yOffset = r * Math.cos(ENGINE.camCurrent.phi);
     const zOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
 
-    // Calculate ideal position relative to the ship, not the planet
+    // Attach camera directly relative to ship
     const idealCamPos = SHIP_STATE.pos.clone()
         .add(shipRight.multiplyScalar(xOffset))
-        .add(shipUp.multiplyScalar(yOffset))
+        .add(up.multiplyScalar(yOffset))
         .add(shipForward.multiplyScalar(-zOffset)); 
 
-    // Rubber-band spring follows the ship quickly but loosely
-    ENGINE.camera.position.lerp(idealCamPos, 0.15); 
+    // Force tighter lerp, and force immediate lookAt
+    ENGINE.camera.position.lerp(idealCamPos, 0.25); 
     ENGINE.camera.lookAt(SHIP_STATE.pos);
     // ---------------------------------
     // Update Radar UI

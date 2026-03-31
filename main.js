@@ -672,12 +672,17 @@ function spawnTree(position) {
     
     treeGroup.add(canopy);
     
-    // Align to surface normal
-    const normal = position.clone().normalize();
-    treeGroup.position.copy(position);
-    treeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), normal);
+    // --- FIX: Convert World space to Planet's Local Space ---
+    const localPos = position.clone();
+    WORLD.group.worldToLocal(localPos);
     
-    // Add to planet so it rotates with it (if we add rotation later)
+    // Align to surface normal based on the local position
+    const normal = localPos.clone().normalize();
+    treeGroup.position.copy(localPos);
+    treeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), normal);
+    // --------------------------------------------------------
+    
+    // Add to planet so it rotates perfectly with it
     WORLD.group.add(treeGroup);
     
     // Pop-in animation scale setup

@@ -1,0 +1,33 @@
+body {
+    margin: 0;
+    overflow: hidden; /* Prevents scrollbars */
+    background-color: #040408; /* Deep space black */
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    pointer-events: none; /* Lets clicks pass through to the 3D canvas */
+    background: rgba(0, 0, 0, 0.6);
+    padding: 15px 25px;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    font-size: 24px;
+    color: #4ade80; /* Botanical green */
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+p {
+    margin: 5px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}

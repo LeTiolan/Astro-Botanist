@@ -3,49 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro-Botanist</title>
+    <title>Astro-Botanist: Deep Core</title>
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
         {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
             }
         }
     </script>
 </head>
 <body>
-    <div id="start-screen" class="fullscreen-overlay">
-        <h1>Astro-Botanist</h1>
-        <p class="subtitle">Bring dead worlds back to life.</p>
-        <button id="start-btn">BEGIN EXPEDITION</button>
-    </div>
-
-    <div id="hud" style="opacity: 0; pointer-events: none;">
-        <div class="panel">
-            <h2>Ecosystem</h2>
-            <div class="bar-bg"><div id="eco-bar" class="bar-fill green-fill"></div></div>
-            <p id="eco-text">0%</p>
+    <div id="ui-layer">
+        <div id="menu-screen" class="screen active">
+            <h1>ASTRO-BOTANIST</h1>
+            <p>Project: Deep Core Genesis</p>
+            <div class="menu-box">
+                <p><strong>OBJECTIVE:</strong> Restore atmospheric pressure to 100%.</p>
+                <p><strong>WARNING:</strong> Planetary gravity is unstable.</p>
+            </div>
+            <button id="btn-start">INITIATE SEQUENCE</button>
         </div>
 
-        <div class="panel">
-            <h2>Water Supply</h2>
-            <div class="bar-bg"><div id="water-bar" class="bar-fill blue-fill"></div></div>
-            <p id="water-text">30 / 100</p>
+        <div id="hud-screen" class="screen">
+            <div class="hud-top">
+                <div class="hud-panel">
+                    <h3>SYSTEMS</h3>
+                    <div class="bar-container"><div id="bar-atmo" class="bar fill-blue"></div></div>
+                    <p>Atmosphere: <span id="txt-atmo">0%</span></p>
+                </div>
+                <div class="hud-panel">
+                    <h3>RESOURCES</h3>
+                    <div class="bar-container"><div id="bar-energy" class="bar fill-yellow"></div></div>
+                    <p>Ship Energy: <span id="txt-energy">100%</span></p>
+                </div>
+            </div>
+            <div class="hud-bottom">
+                <div class="controls-panel">
+                    <p>[ W A S D ] Thrusters | [ SPACE ] Deploy Terra-Seed | [ SHIFT ] Boost</p>
+                </div>
+                <div class="readout-panel">
+                    <p id="txt-velocity">VEL: 0.00 m/s</p>
+                    <p id="txt-alt">ALT: 0.00 m</p>
+                </div>
+            </div>
         </div>
 
-        <div class="controls-hint">
-            <p><strong>W A S D</strong> to fly</p>
-            <p><strong>SPACE</strong> to plant (Costs 10 Water)</p>
-            <p>Fly into <strong>Blue Orbs</strong> to collect Water</p>
+        <div id="end-screen" class="screen">
+            <h1 id="end-title">MISSION COMPLETE</h1>
+            <p id="end-desc">Ecosystem stabilized.</p>
+            <button id="btn-restart">REBOOT SYSTEMS</button>
         </div>
     </div>
-    
-    <div id="win-screen" class="fullscreen-overlay" style="opacity: 0; pointer-events: none;">
-        <h1>PLANET RESTORED</h1>
-        <p>The atmosphere is stable. Life has returned.</p>
-        <button onclick="location.reload()">PLAY AGAIN</button>
-    </div>
-
     <script type="module" src="main.js"></script>
 </body>
 </html>

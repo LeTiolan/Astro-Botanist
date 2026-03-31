@@ -432,6 +432,27 @@ function toggleOrbitLock() {
 function updateShipPhysics(dt) {
     if (ENGINE.state !== 'PLAY') return;
 
+    // --- NEW: ONE-TIME SPAWN LOCK SETUP ---
+    // This forces the ship perfectly onto the rails the moment the game starts
+    if (!PLAYER.hasSpawned) {
+        PLAYER.hasSpawned = true;
+        const radius = SHIP_STATE.pos.length();
+        PLAYER.angularVelocity = SHIP_STATE.vel.length() / radius;
+        PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
+        SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(SHIP_STATE.vel.length()));
+        
+        PLAYER.isLocked = true;
+        PLAYER.canLock = true;
+        
+        // Sync the UI Button to show we are locked
+        const btn = document.getElementById('btn-lock');
+        if (btn) {
+            btn.classList.add('btn-locked');
+            btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
+        }
+    }
+    // --------------------------------------
+
     const distSq = SHIP_STATE.pos.lengthSq();
     const dist = Math.sqrt(distSq);
     PLAYER.altitude = dist;
@@ -442,7 +463,7 @@ function updateShipPhysics(dt) {
         SHIP_STATE.vel.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);
         PLAYER.velocity = SHIP_STATE.vel.length();
         
-        PLAYER.trail.visible = false; // Hide trail while locked
+        PLAYER.trail.visible = false; 
         
         const statusTxt = document.getElementById('txt-orbit-status');
         if (statusTxt) {
@@ -483,18 +504,26 @@ function updateShipPhysics(dt) {
     const mtx = new THREE.Matrix4().lookAt(SHIP_STATE.pos, lookTarget, up);
     PLAYER.mesh.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(mtx), 0.1);
 
-    // Update Soft Mouse Camera
+    // --- NEW: LOOSE CARTOON CAMERA ---
     ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
     ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
     ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
 
-    // Convert Spherical to Cartesian for Camera
-    const cx = SHIP_STATE.pos.x + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
-    const cy = SHIP_STATE.pos.y + ENGINE.camCurrent.radius * Math.cos(ENGINE.camCurrent.phi);
-    const cz = SHIP_STATE.pos.z + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
+    // 1. Calculate the ideal target position based on the soft mouse movements
+    const idealCx = SHIP_STATE.pos.x + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
+    const idealCy = SHIP_STATE.pos.y + ENGINE.camCurrent.radius * Math.cos(ENGINE.camCurrent.phi);
+    const idealCz = SHIP_STATE.pos.z + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
+    const idealCamPos = new THREE.Vector3(idealCx, idealCy, idealCz);
 
-    ENGINE.camera.position.set(cx, cy, cz);
-    ENGINE.camera.lookAt(SHIP_STATE.pos);
+    // 2. Spring-Lerp the Camera's actual position 
+    // (Lower the 0.08 to make it looser, raise it to make it tighter)
+    ENGINE.camera.position.lerp(idealCamPos, 0.08);
+
+    // 3. Spring-Lerp the Look Target so panning has a slight delay
+    if (!ENGINE.camLookTarget) ENGINE.camLookTarget = SHIP_STATE.pos.clone();
+    ENGINE.camLookTarget.lerp(SHIP_STATE.pos, 0.15); 
+    ENGINE.camera.lookAt(ENGINE.camLookTarget);
+    // ---------------------------------
 
     // Update Radar UI
     const radarShip = document.getElementById('radar-ship');
@@ -508,7 +537,6 @@ function updateShipPhysics(dt) {
     if (dist < CONFIG.planetRadius + 1) triggerGameOver("ORBIT DECAYED", "Ship collided with the planetary surface.", "var(--neon-purple)");
     if (dist > 300) triggerGameOver("LOST IN SPACE", "Escaped planetary gravity well.", "var(--neon-purple)");
 }
-
 function updatePredictiveTrail() {
     const simPos = SHIP_STATE.pos.clone();
     const simVel = SHIP_STATE.vel.clone();

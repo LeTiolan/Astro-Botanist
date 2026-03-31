@@ -26,7 +26,11 @@ const ENGINE = {
     clock: new THREE.Clock(),
     state: 'START', // START, PLAY, WIN
     keys: { w: false, s: false, space: false, spaceLocked: false }
+        mouse: { isDown: false, lastX: 0, lastY: 0 },
+    camTarget: { theta: Math.PI/2, phi: Math.PI/3, radius: 100 },
+    camCurrent: { theta: Math.PI/2, phi: Math.PI/3, radius: 100 }
 };
+
 
 const PLAYER = {
     mesh: null,
@@ -35,7 +39,12 @@ const PLAYER = {
     velocity: 5.5,      // Tangential velocity
     payloads: CONFIG.maxPayloads,
     trail: null         // Visual orbit path
+        canLock: false,
+    isLocked: false,
+    orbitAxis: new THREE.Vector3(),
+    angularVelocity: 0
 };
+
 
 const WORLD = {
     group: new THREE.Group(),

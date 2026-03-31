@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro-Botanist: Serenity</title>
+    <title>Astro-Botanist</title>
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
         {
@@ -14,22 +14,36 @@
     </script>
 </head>
 <body>
-    <div id="ui">
+    <div id="start-screen" class="fullscreen-overlay">
         <h1>Astro-Botanist</h1>
-        <div class="progress-container">
-            <div id="progress-bar"></div>
+        <p class="subtitle">Bring dead worlds back to life.</p>
+        <button id="start-btn">BEGIN EXPEDITION</button>
+    </div>
+
+    <div id="hud" style="opacity: 0; pointer-events: none;">
+        <div class="panel">
+            <h2>Ecosystem</h2>
+            <div class="bar-bg"><div id="eco-bar" class="bar-fill green-fill"></div></div>
+            <p id="eco-text">0%</p>
         </div>
-        <p id="progress-text">Terraformed: 0%</p>
-        <hr>
-        <p><strong>Click canvas</strong> to start audio.</p>
-        <p><strong>W / S / A / D</strong> to gently orbit.</p>
-        <p><strong>SPACEBAR</strong> to cultivate.</p>
-        <p id="current-tool" class="tool-active">Tool: BIOLUMINESCENT SEED</p>
+
+        <div class="panel">
+            <h2>Water Supply</h2>
+            <div class="bar-bg"><div id="water-bar" class="bar-fill blue-fill"></div></div>
+            <p id="water-text">30 / 100</p>
+        </div>
+
+        <div class="controls-hint">
+            <p><strong>W A S D</strong> to fly</p>
+            <p><strong>SPACE</strong> to plant (Costs 10 Water)</p>
+            <p>Fly into <strong>Blue Orbs</strong> to collect Water</p>
+        </div>
     </div>
     
-    <div id="win-screen">
-        <h2>Ecosystem Restored</h2>
-        <p>The asteroid is breathing again.</p>
+    <div id="win-screen" class="fullscreen-overlay" style="opacity: 0; pointer-events: none;">
+        <h1>PLANET RESTORED</h1>
+        <p>The atmosphere is stable. Life has returned.</p>
+        <button onclick="location.reload()">PLAY AGAIN</button>
     </div>
 
     <script type="module" src="main.js"></script>

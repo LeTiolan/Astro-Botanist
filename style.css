@@ -1,70 +1,82 @@
 body {
     margin: 0;
     overflow: hidden;
-    background-color: #1a1a24; /* Softer dark purple/blue */
-    color: #e0e0e0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0b0f19; 
+    color: #e2e8f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    user-select: none;
 }
 
-#ui {
+/* Fullscreen Overlays (Start & Win) */
+.fullscreen-overlay {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 10;
-    pointer-events: none;
-    background: rgba(20, 20, 30, 0.4);
-    backdrop-filter: blur(8px); /* Frosted glass effect */
-    padding: 20px 30px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-}
-
-h1 {
-    margin: 0 0 15px 0;
-    font-size: 22px;
-    color: #a7f3d0; /* Soft mint green */
-    font-weight: 400;
-    letter-spacing: 3px;
-}
-
-p { margin: 8px 0; font-size: 13px; color: #cbd5e1; }
-hr { border-color: rgba(255,255,255,0.1); margin: 15px 0; }
-
-.tool-active { color: #fdf4ff !important; text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); font-weight: bold; }
-
-/* Progress Bar */
-.progress-container {
-    width: 100%;
-    height: 6px;
-    background: rgba(0,0,0,0.5);
-    border-radius: 3px;
-    margin-bottom: 5px;
-    overflow: hidden;
-}
-
-#progress-bar {
-    width: 0%;
-    height: 100%;
-    background: #34d399;
-    box-shadow: 0 0 10px #34d399;
-    transition: width 0.5s ease-out;
-}
-
-#win-screen {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    background: rgba(20, 20, 30, 0.7);
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(11, 15, 25, 0.85);
     backdrop-filter: blur(10px);
-    padding: 40px;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 2s ease-in;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    transition: opacity 1s ease;
 }
 
-#win-screen h2 { margin: 0; color: #a7f3d0; font-size: 32px; font-weight: 300; }
+h1 { margin: 0; font-size: 3rem; color: #6ee7b7; letter-spacing: 4px; text-transform: uppercase; }
+.subtitle { font-size: 1.2rem; color: #94a3b8; margin-bottom: 40px; }
+
+button {
+    background: transparent;
+    border: 2px solid #6ee7b7;
+    color: #6ee7b7;
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+button:hover {
+    background: #6ee7b7;
+    color: #0b0f19;
+    box-shadow: 0 0 20px rgba(110, 231, 183, 0.5);
+}
+
+/* In-Game HUD */
+#hud {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10;
+    transition: opacity 1s ease;
+}
+
+.panel {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin: 20px;
+    width: 250px;
+    backdrop-filter: blur(5px);
+}
+
+.panel h2 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #cbd5e1; }
+.panel p { margin: 8px 0 0 0; font-size: 12px; text-align: right; font-weight: bold; }
+
+.bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0%; transition: width 0.3s ease; }
+.green-fill { background: #34d399; box-shadow: 0 0 10px #34d399; }
+.blue-fill { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+
+.controls-hint {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.controls-hint p { margin: 5px 0; font-size: 13px; color: #94a3b8; }
+.controls-hint strong { color: #f8fafc; }

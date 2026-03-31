@@ -504,25 +504,33 @@ function updateShipPhysics(dt) {
     const mtx = new THREE.Matrix4().lookAt(SHIP_STATE.pos, lookTarget, up);
     PLAYER.mesh.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(mtx), 0.1);
 
-    // --- NEW: LOOSE CARTOON CAMERA ---
+// --- NEW: LOOSE CARTOON CHASE CAMERA ---
     ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
     ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
     ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
 
-    // 1. Calculate the ideal target position based on the soft mouse movements
-    const idealCx = SHIP_STATE.pos.x + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
-    const idealCy = SHIP_STATE.pos.y + ENGINE.camCurrent.radius * Math.cos(ENGINE.camCurrent.phi);
-    const idealCz = SHIP_STATE.pos.z + ENGINE.camCurrent.radius * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
-    const idealCamPos = new THREE.Vector3(idealCx, idealCy, idealCz);
+    // 1. Get the Ship's Local Directions
+    const shipUp = SHIP_STATE.pos.clone().normalize();
+    const shipForward = SHIP_STATE.vel.clone().normalize();
+    const shipRight = shipForward.clone().cross(shipUp).normalize();
 
-    // 2. Spring-Lerp the Camera's actual position 
-    // (Lower the 0.08 to make it looser, raise it to make it tighter)
+    // 2. Calculate spherical offsets based on your mouse movements
+    const r = ENGINE.camCurrent.radius;
+    const xOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
+    const yOffset = r * Math.cos(ENGINE.camCurrent.phi);
+    const zOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
+
+    // 3. Attach the camera relative to the ship's orientation
+    const idealCamPos = SHIP_STATE.pos.clone()
+        .add(shipRight.multiplyScalar(xOffset))
+        .add(shipUp.multiplyScalar(yOffset))
+        .add(shipForward.multiplyScalar(-zOffset)); // Negative Z puts camera trailing behind
+
+    // 4. Loose rubber-band spring
     ENGINE.camera.position.lerp(idealCamPos, 0.08);
 
-    // 3. Spring-Lerp the Look Target so panning has a slight delay
-    if (!ENGINE.camLookTarget) ENGINE.camLookTarget = SHIP_STATE.pos.clone();
-    ENGINE.camLookTarget.lerp(SHIP_STATE.pos, 0.15); 
-    ENGINE.camera.lookAt(ENGINE.camLookTarget);
+    // 5. Hard focus directly on the ship
+    ENGINE.camera.lookAt(SHIP_STATE.pos);
     // ---------------------------------
 
     // Update Radar UI

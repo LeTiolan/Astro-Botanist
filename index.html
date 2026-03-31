@@ -2,53 +2,130 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Astro-Botanist game interface">
-    <title>Astro-Botanist: Deep Core</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Astro-Botanist: Orbital Genesis</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main id="ui-layer">
-        <section id="menu-screen" class="screen active">
-            <h1>ASTRO-BOTANIST</h1>
-            <p>Project: Deep Core Genesis</p>
-            <div class="menu-box">
-                <p><strong>OBJECTIVE:</strong> Restore atmospheric pressure to 100%.</p>
-                <p><strong>WARNING:</strong> Planetary gravity is unstable.</p>
-            </div>
-            <button id="btn-start" type="button">INITIATE SEQUENCE</button>
-        </section>
+    <svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
+        <symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></symbol>
+        <symbol id="icon-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></symbol>
+        <symbol id="icon-seed" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7zm1-11h-2v3H8v2h3v3h2v-3h3v-2h-3V8z"/></symbol>
+        <symbol id="icon-water" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8zm0 18c-3.35 0-6-2.57-6-6.2 0-2.34 1.95-5.44 6-9.14 4.05 3.7 6 6.79 6 9.14 0 3.63-2.65 6.2-6 6.2z"/></symbol>
+        <symbol id="icon-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></symbol>
+    </svg>
 
-        <aside id="hud-screen" class="screen" aria-hidden="true">
-            <div class="hud-top">
-                <div class="hud-panel">
-                    <h3>SYSTEMS</h3>
-                    <div class="bar-container"><div id="bar-atmo" class="bar fill-blue"></div></div>
-                    <p>Atmosphere: <span id="txt-atmo">0%</span></p>
+    <main id="game-container">
+        <div id="ui-layer">
+            
+            <section id="menu-start" class="glass-panel hyper-round active-screen">
+                <div class="logo-container">
+                    <div class="orb-logo pulsing"></div>
+                    <h1>ORBITAL GENESIS</h1>
                 </div>
-                <div class="hud-panel">
-                    <h3>RESOURCES</h3>
-                    <div class="bar-container"><div id="bar-energy" class="bar fill-yellow"></div></div>
-                    <p>Ship Energy: <span id="txt-energy">100%</span></p>
+                <p class="subtitle">Establish a stable orbit. Seed the core.</p>
+                
+                <div class="interactive-pill-group">
+                    <button id="btn-play" class="pill-btn primary-pill hover-scale">
+                        <svg class="icon"><use href="#icon-play"></use></svg>
+                        <span>COMMENCE ORBIT</span>
+                    </button>
+                    <button id="btn-lore" class="pill-btn secondary-pill hover-scale">
+                        <span>DATA LOGS</span>
+                    </button>
                 </div>
-            </div>
-            <div class="hud-bottom">
-                <div class="controls-panel">
-                    <p>[ W A S D ] Thrusters | [ SPACE ] Deploy Terra-Seed | [ SHIFT ] Boost</p>
-                </div>
-                <div class="readout-panel">
-                    <p id="txt-velocity">VEL: 0.00 m/s</p>
-                    <p id="txt-alt">ALT: 0.00 m</p>
-                </div>
-            </div>
-        </aside>
+            </section>
 
-        <section id="end-screen" class="screen" aria-hidden="true">
-            <h2 id="end-title">MISSION COMPLETE</h2>
-            <p id="end-desc">Ecosystem stabilized.</p>
-            <button id="btn-restart" type="button">REBOOT SYSTEMS</button>
-        </section>
+            <section id="menu-lore" class="glass-panel hyper-round hidden">
+                <h2>MISSION BRIEFING</h2>
+                <div class="scroll-box soft-scroll">
+                    <p>The core of Sector 4 is dormant. Your orbiter is equipped with high-velocity terra-seeds.</p>
+                    <p><strong>ORBITAL MECHANICS:</strong> Burning prograde (W) widens your orbit. Burning retrograde (S) shrinks it. Do not intersect the planetary surface.</p>
+                </div>
+                <button id="btn-close-lore" class="pill-btn secondary-pill hover-scale">RETURN</button>
+            </section>
+
+            <aside id="hud-active" class="hidden">
+                
+                <div class="hud-cluster top-left">
+                    <div class="glass-pill readout-pill">
+                        <div class="pill-icon"><svg class="icon"><use href="#icon-seed"></use></svg></div>
+                        <div class="pill-data">
+                            <span class="label">ATMOSPHERE</span>
+                            <div class="liquid-bar-container round-bar">
+                                <div id="bar-atmo" class="liquid-fill green-fill"></div>
+                            </div>
+                        </div>
+                        <span id="txt-atmo" class="value-text">0%</span>
+                    </div>
+
+                    <div class="glass-pill readout-pill mt-10">
+                        <div class="pill-icon"><svg class="icon"><use href="#icon-water"></use></svg></div>
+                        <div class="pill-data">
+                            <span class="label">PAYLOADS</span>
+                            <div class="liquid-bar-container round-bar">
+                                <div id="bar-payload" class="liquid-fill blue-fill"></div>
+                            </div>
+                        </div>
+                        <span id="txt-payload" class="value-text">100</span>
+                    </div>
+                </div>
+
+                <div class="hud-cluster top-right">
+                    <div class="glass-pill telemetry-pill">
+                        <div class="telemetry-ring">
+                            <div class="ring-dot"></div>
+                        </div>
+                        <div class="telemetry-data">
+                            <span class="label">ORBITAL VELOCITY</span>
+                            <span id="txt-vel" class="value-text large-val">7.8 km/s</span>
+                        </div>
+                    </div>
+                    <div class="glass-pill telemetry-pill mt-10">
+                        <div class="telemetry-data">
+                            <span class="label">PERIAPSIS (ALT)</span>
+                            <span id="txt-alt" class="value-text">400 km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hud-cluster bottom-center">
+                    <div class="glass-pill controls-pill">
+                        <div class="key-group">
+                            <div class="key-cap round-key">W</div>
+                            <span>PROGRADE</span>
+                        </div>
+                        <div class="key-group">
+                            <div class="key-cap round-key">S</div>
+                            <span>RETROGRADE</span>
+                        </div>
+                        <div class="separator"></div>
+                        <button id="btn-fire" class="action-orb pulse-orb">
+                            <span>FIRE<br>SEED</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="hud-cluster bottom-right">
+                    <button class="icon-orb glass-orb hover-scale">
+                        <svg class="icon"><use href="#icon-settings"></use></svg>
+                    </button>
+                </div>
+
+            </aside>
+
+            <section id="menu-win" class="glass-panel hyper-round hidden">
+                <div class="orb-logo glowing-green"></div>
+                <h1 class="success-text">BIOSPHERE STABLE</h1>
+                <p>Orbit achieved. Ecosystem self-sustaining.</p>
+                <button id="btn-restart" class="pill-btn primary-pill hover-scale">
+                    <span>NEW PLANET</span>
+                </button>
+            </section>
+
+        </div>
     </main>
+
     <script type="module" src="main.js"></script>
 </body>
 </html>

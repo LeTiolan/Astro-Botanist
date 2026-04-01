@@ -647,7 +647,6 @@ function updateProjectiles(dt) {
     WORLD.projectiles.forEach(p => {
         if (!p.alive) return;
 
-        // Simple gravity for projectiles
         const distSq = p.mesh.position.lengthSq();
         const gravityDir = p.mesh.position.clone().normalize().negate();
         const gAccel = gravityDir.clone().multiplyScalar(CONFIG.gravity / distSq);
@@ -655,15 +654,29 @@ function updateProjectiles(dt) {
         p.vel.add(gAccel.multiplyScalar(dt));
         p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
 
-        // Check impact with planet (approximate using radius)
-        if (p.mesh.position.length() <= CONFIG.planetRadius + 0.5) {
+        const dist = Math.sqrt(distSq);
+        const norm = p.mesh.position.clone().normalize();
+        
+        const localNorm = norm.clone();
+        WORLD.group.worldToLocal(localNorm);
+        localNorm.normalize(); 
+
+        const noise1 = terrainNoise.noise3D(localNorm.x * 2, localNorm.y * 2, localNorm.z * 2);
+        const noise2 = terrainNoise.noise3D(localNorm.x * 8, localNorm.y * 8, localNorm.z * 8);
+        const elevation = 1 + (noise1 * 0.1) + (noise2 * 0.05);
+        
+        const actualSurfaceRadius = CONFIG.planetRadius * elevation;
+
+        if (dist <= actualSurfaceRadius + 0.5) {
             p.alive = false;
             ENGINE.scene.remove(p.mesh);
             
-            spawnTree(p.mesh.position.clone());
-            spawnImpactParticles(p.mesh.position.clone());
+            const impactPos = norm.multiplyScalar(actualSurfaceRadius);
             
-            WORLD.atmosphere += 2.5; // Increase atmosphere
+            spawnTree(impactPos);
+            if (typeof spawnImpactParticles === 'function') spawnImpactParticles(impactPos);
+            
+            WORLD.atmosphere += 2.5; 
             if (WORLD.atmosphere >= CONFIG.atmoMax) {
                 triggerWin();
             }

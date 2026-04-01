@@ -296,22 +296,32 @@ function buildWorld() {
     WORLD.atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
     WORLD.group.add(WORLD.atmoMesh);
 
-    // Background Stars (Particle System)
-    const starsGeo = new THREE.BufferGeometry();
-    const starsPos = [];
-    for(let i = 0; i < 2000; i++) {
-        const x = (Math.random() - 0.5) * 1000;
-        const y = (Math.random() - 0.5) * 1000;
-        const z = (Math.random() - 0.5) * 1000;
-        // Keep stars away from the immediate play area
-        if (Math.abs(x) < 100 && Math.abs(y) < 100 && Math.abs(z) < 100) continue;
-        starsPos.push(x, y, z);
+ // Background Stars — Three layered systems for depth
+function makeStarLayer(count, spread, minClear, size, color, opacity) {
+    const geo = new THREE.BufferGeometry();
+    const pos = [];
+    let attempts = 0;
+    while (pos.length / 3 < count && attempts < count * 10) {
+        attempts++;
+        const x = (Math.random() - 0.5) * spread;
+        const y = (Math.random() - 0.5) * spread;
+        const z = (Math.random() - 0.5) * spread;
+        if (Math.abs(x) < minClear && Math.abs(y) < minClear && Math.abs(z) < minClear) continue;
+        pos.push(x, y, z);
     }
-    starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
-    const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0.8 });
-    const starField = new THREE.Points(starsGeo, starsMat);
-    ENGINE.scene.add(starField);
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color, size, transparent: true, opacity, sizeAttenuation: true });
+    return new THREE.Points(geo, mat);
 }
+
+// Layer 1: Dense distant field — tiny, cool white
+ENGINE.scene.add(makeStarLayer(8000, 2000, 150, 0.4, 0xddeeff, 0.6));
+// Layer 2: Mid-range warm stars — slightly yellow tint
+ENGINE.scene.add(makeStarLayer(3000, 1200, 120, 0.7, 0xfff5cc, 0.5));
+// Layer 3: Bright foreground stars — vivid, sparse
+ENGINE.scene.add(makeStarLayer(400, 800, 100, 1.8, 0xffffff, 0.9));
+// Layer 4: Rare blue giants
+ENGINE.scene.add(makeStarLayer(80, 900, 100, 3.0, 0x99ccff, 1.0));
 
 // --- 6. PLAYER/ORBITER BUILDING ---
 function buildPlayer() {

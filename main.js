@@ -134,28 +134,30 @@ const UI = {
         }
     },
 
-    updateHUD() {
+ updateHUD() {
         if (ENGINE.state !== 'PLAY') return;
 
-        // Update Liquid Bars
+        // Update Liquid Bars (Wrapped in safety checks)
         const atmoPercent = (WORLD.atmosphere / CONFIG.atmoMax) * 100;
-        this.bars.atmo.style.width = `${Math.min(atmoPercent, 100)}%`;
-        this.text.atmo.innerText = `${Math.floor(atmoPercent)}%`;
+        if (this.bars.atmo) this.bars.atmo.style.width = `${Math.min(atmoPercent, 100)}%`;
+        if (this.text.atmo) this.text.atmo.innerText = `${Math.floor(atmoPercent)}%`;
 
         const payloadPercent = (PLAYER.payloads / CONFIG.maxPayloads) * 100;
-        this.bars.payload.style.width = `${Math.max(payloadPercent, 0)}%`;
-        this.text.payload.innerText = PLAYER.payloads;
+        if (this.bars.payload) this.bars.payload.style.width = `${Math.max(payloadPercent, 0)}%`;
+        if (this.text.payload) this.text.payload.innerText = PLAYER.payloads;
 
-        // Update Telemetry
-        this.text.vel.innerText = `${PLAYER.velocity.toFixed(2)} km/s`;
+        // Update Telemetry (Wrapped in safety checks)
+        if (this.text.vel) this.text.vel.innerText = `${PLAYER.velocity.toFixed(2)} km/s`;
+        
         const surfaceAlt = PLAYER.altitude - CONFIG.planetRadius;
-        this.text.alt.innerText = `${surfaceAlt.toFixed(1)} km`;
-
-        // Telemetry warning colors
-        if (surfaceAlt < 5) this.text.alt.style.color = 'var(--neon-purple)';
-        else this.text.alt.style.color = 'var(--text-main)';
+        if (this.text.alt) {
+            this.text.alt.innerText = `${surfaceAlt.toFixed(1)} km`;
+            // Telemetry warning colors
+            if (surfaceAlt < 5) this.text.alt.style.color = 'var(--neon-purple)';
+            else this.text.alt.style.color = 'var(--text-main)';
+        }
     }
-};
+    };
 
 // --- 3. CUSTOM MATH & PROCEDURAL NOISE ---
 // A simplified seeded pseudo-random number generator for terrain consistency

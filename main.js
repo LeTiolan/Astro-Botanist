@@ -325,27 +325,94 @@ ENGINE.scene.add(makeStarLayer(80, 900, 100, 3.0, 0x99ccff, 1.0));
 
 // --- 6. PLAYER/ORBITER BUILDING ---
 function buildPlayer() {
-    // A sleek, hyper-modern orbital seed pod
     PLAYER.mesh = new THREE.Group();
 
-    // Main Hull
-    const hullGeo = new THREE.CapsuleGeometry(0.8, 2, 8, 16);
-    hullGeo.rotateX(Math.PI / 2);
-    const hullMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.5, roughness: 0.1 });
-    const hull = new THREE.Mesh(hullGeo, hullMat);
-    hull.castShadow = true;
-    PLAYER.mesh.add(hull);
+    // --- FUSELAGE: tapered body, wider at engine end ---
+    const fuselageGeo = new THREE.CylinderGeometry(0.55, 0.72, 5, 12);
+    fuselageGeo.rotateX(Math.PI / 2);
+    const fuselageMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.7, roughness: 0.2 });
+    const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+    fuselage.castShadow = true;
+    PLAYER.mesh.add(fuselage);
 
-    // Glowing Energy Rings
-    const ringGeo = new THREE.TorusGeometry(1.2, 0.1, 8, 32);
+    // --- NOSE CONE: blue tint, emissive glow ---
+    const noseGeo = new THREE.ConeGeometry(0.55, 2.5, 12);
+    noseGeo.rotateX(Math.PI / 2);
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, metalness: 0.8, roughness: 0.1, emissive: 0x0369a1, emissiveIntensity: 0.4 });
+    const nose = new THREE.Mesh(noseGeo, noseMat);
+    nose.position.z = 3.7;
+    nose.castShadow = true;
+    PLAYER.mesh.add(nose);
+
+    // --- COCKPIT WINDOW ---
+    const windowGeo = new THREE.SphereGeometry(0.28, 8, 8);
+    const windowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const cockpit = new THREE.Mesh(windowGeo, windowMat);
+    cockpit.position.set(0, 0.45, 2.8);
+    PLAYER.mesh.add(cockpit);
+
+    // --- ENGINE BELL: narrows toward front, flares at back ---
+    const bellGeo = new THREE.CylinderGeometry(0.3, 1.1, 1.6, 12);
+    bellGeo.rotateX(Math.PI / 2);
+    const bellMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.95, roughness: 0.05 });
+    const bell = new THREE.Mesh(bellGeo, bellMat);
+    bell.position.z = -3.3;
+    PLAYER.mesh.add(bell);
+
+    // --- ENGINE INNER GLOW ---
+    const glowGeo = new THREE.CircleGeometry(0.55, 16);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+    const engineGlow = new THREE.Mesh(glowGeo, glowMat);
+    engineGlow.position.z = -4.15;
+    PLAYER.mesh.add(engineGlow);
+
+    // --- SOLAR PANELS ---
+    const panelMat = new THREE.MeshStandardMaterial({ color: 0x1e3a5f, metalness: 0.3, roughness: 0.5, emissive: 0x0c2340, emissiveIntensity: 0.3 });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.1 });
+
+    [-1, 1].forEach(side => {
+        const panelGeo = new THREE.BoxGeometry(4.2, 0.06, 1.4);
+        const panel = new THREE.Mesh(panelGeo, panelMat);
+        panel.position.set(side * 3.0, 0, 0);
+        PLAYER.mesh.add(panel);
+
+        // Panel frame
+        const frameGeo = new THREE.BoxGeometry(4.3, 0.1, 0.08);
+        [-0.65, 0, 0.65].forEach(z => {
+            const frame = new THREE.Mesh(frameGeo, frameMat);
+            frame.position.set(side * 3.0, 0, z);
+            PLAYER.mesh.add(frame);
+        });
+
+        // Nav light on wing tip
+        const navGeo = new THREE.SphereGeometry(0.18, 6, 6);
+        const navMat = new THREE.MeshBasicMaterial({ color: side === -1 ? 0xff3333 : 0x33ff88 });
+        const nav = new THREE.Mesh(navGeo, navMat);
+        nav.position.set(side * 5.2, 0, 0);
+        PLAYER.mesh.add(nav);
+    });
+
+    // --- FINS: 4 fins at the engine end ---
+    const finMat = new THREE.MeshStandardMaterial({ color: 0xc084fc, metalness: 0.6, roughness: 0.2, emissive: 0x6b21a8, emissiveIntensity: 0.3 });
+    [0, 1, 2, 3].forEach(i => {
+        const angle = (i / 4) * Math.PI * 2;
+        const finGeo = new THREE.BoxGeometry(0.1, 1.4, 1.2);
+        const fin = new THREE.Mesh(finGeo, finMat);
+        fin.position.set(Math.sin(angle) * 0.85, Math.cos(angle) * 0.85, -2.5);
+        fin.rotation.z = angle;
+        PLAYER.mesh.add(fin);
+    });
+
+    // --- ORBITAL RING ---
+    const ringGeo = new THREE.TorusGeometry(1.1, 0.08, 8, 40);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const ring1 = new THREE.Mesh(ringGeo, ringMat);
-    ring1.rotation.y = Math.PI / 2;
-    PLAYER.mesh.add(ring1);
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.y = Math.PI / 2;
+    PLAYER.mesh.add(ring);
 
     ENGINE.scene.add(PLAYER.mesh);
 
-    // Predictive Orbit Path (Line)
+    // Predictive Orbit Path
     const trailGeo = new THREE.BufferGeometry();
     const trailMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, linewidth: 2 });
     PLAYER.trail = new THREE.LineLoop(trailGeo, trailMat);
@@ -822,18 +889,32 @@ function updateEnvironment(dt) {
 
 // --- 11. PARTICLE EFFECTS ---
 function spawnEngineParticles(pos, dir) {
-    // Soft round particles
-    const geo = new THREE.SphereGeometry(0.3, 4, 4);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
-    const mesh = new THREE.Mesh(geo, mat);
-    
-    mesh.position.copy(pos).add(dir.clone().multiplyScalar(2)); // Spawn behind ship
-    
-    const spread = new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), (Math.random()-0.5)).multiplyScalar(2);
-    const vel = dir.clone().multiplyScalar(10).add(spread);
-    
-    ENGINE.scene.add(mesh);
-    WORLD.particles.push({ mesh, vel, life: 0.5, maxLife: 0.5 });
+    // Hot white core
+    const coreGeo = new THREE.SphereGeometry(0.18, 4, 4);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0 });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    coreMesh.position.copy(pos).add(dir.clone().multiplyScalar(1.5));
+    const coreSpread = new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), (Math.random()-0.5)).multiplyScalar(0.8);
+    ENGINE.scene.add(coreMesh);
+    WORLD.particles.push({ mesh: coreMesh, vel: dir.clone().multiplyScalar(14).add(coreSpread), life: 0.25, maxLife: 0.25 });
+
+    // Mid plume — blue
+    const plumeGeo = new THREE.SphereGeometry(0.3, 4, 4);
+    const plumeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 });
+    const plumeMesh = new THREE.Mesh(plumeGeo, plumeMat);
+    plumeMesh.position.copy(pos).add(dir.clone().multiplyScalar(2.5));
+    const plumeSpread = new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), (Math.random()-0.5)).multiplyScalar(2);
+    ENGINE.scene.add(plumeMesh);
+    WORLD.particles.push({ mesh: plumeMesh, vel: dir.clone().multiplyScalar(9).add(plumeSpread), life: 0.5, maxLife: 0.5 });
+
+    // Outer cool exhaust — purple fade
+    const outerGeo = new THREE.SphereGeometry(0.4, 4, 4);
+    const outerMat = new THREE.MeshBasicMaterial({ color: 0xc084fc, transparent: true, opacity: 0.4 });
+    const outerMesh = new THREE.Mesh(outerGeo, outerMat);
+    outerMesh.position.copy(pos).add(dir.clone().multiplyScalar(3.5));
+    const outerSpread = new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), (Math.random()-0.5)).multiplyScalar(3.5);
+    ENGINE.scene.add(outerMesh);
+    WORLD.particles.push({ mesh: outerMesh, vel: dir.clone().multiplyScalar(6).add(outerSpread), life: 0.8, maxLife: 0.8 });
 }
 
 function spawnImpactParticles(pos) {

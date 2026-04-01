@@ -7,8 +7,8 @@ import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 // --- 1. GLOBAL STATE & CONFIGURATION ---
 const CONFIG = {
-    planetRadius: 30,
-    gravity: 1500,        // Gravitational parameter (mu) for orbital mechanics
+  planetRadius: 50,
+gravity: 600,        // Gravitational parameter (mu) for orbital mechanics
     atmoMax: 100,         // Target atmosphere level
     maxPayloads: 100,
     cameraSmooth: 0.1,
@@ -215,7 +215,7 @@ function init() {
 
     // 4.2 Setup Camera
     ENGINE.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-    ENGINE.camera.position.set(0, 0, 100);
+   ENGINE.camera.position.set(0, 0, 160);
 
     // 4.3 Setup Renderer
     ENGINE.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -237,10 +237,10 @@ function init() {
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 10;
     sunLight.shadow.camera.far = 300;
-    sunLight.shadow.camera.left = -60;
-    sunLight.shadow.camera.right = 60;
-    sunLight.shadow.camera.top = 60;
-    sunLight.shadow.camera.bottom = -60;
+  sunLight.shadow.camera.left = -100;
+sunLight.shadow.camera.right = 100;
+sunLight.shadow.camera.top = 100;
+sunLight.shadow.camera.bottom = -100;
     sunLight.shadow.bias = -0.001;
     ENGINE.scene.add(sunLight);
 
@@ -825,7 +825,7 @@ function triggerWin() {
     
     // Zoom camera out for a cinematic shot
     const zoomOut = setInterval(() => {
-        ENGINE.camera.position.lerp(new THREE.Vector3(0, 0, 150), 0.02);
+      ENGINE.camera.position.lerp(new THREE.Vector3(0, 0, 220), 0.02);
         ENGINE.camera.lookAt(0,0,0);
     }, 16);
     setTimeout(() => clearInterval(zoomOut), 5000);
@@ -839,7 +839,7 @@ function animate() {
     if (ENGINE.state === 'START') {
         // Idle cinematic camera orbiting the planet
         const time = ENGINE.clock.getElapsedTime();
-        ENGINE.camera.position.set(Math.sin(time*0.1)*80, 20, Math.cos(time*0.1)*80);
+      ENGINE.camera.position.set(Math.sin(time*0.1)*130, 30, Math.cos(time*0.1)*130);
         ENGINE.camera.lookAt(0,0,0);
         WORLD.group.rotation.y += 0.05 * dt;
     } 

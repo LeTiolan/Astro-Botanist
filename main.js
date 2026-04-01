@@ -28,8 +28,8 @@ const ENGINE = {
     keys: { w: false, s: false, space: false, spaceLocked: false },
     // NEW: Mouse and Camera tracking
     mouse: { isDown: false, lastX: 0, lastY: 0 },
- camTarget: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 20 },
-    camCurrent: { theta: Math.PI/2, phi: Math.PI/2.5, radius: 20 }
+camTarget: { theta: 0, phi: 0.2, radius: 20 },
+camCurrent: { theta: 0, phi: 0.2, radius: 20 }
 };
 
 const PLAYER = {
@@ -387,7 +387,7 @@ function bindInputs() {
         // Rotate horizontally
         ENGINE.camTarget.theta -= dx * 0.005;
         // Rotate vertically (clamped to prevent flipping upside down)
-        ENGINE.camTarget.phi = Math.max(0.1, Math.min(Math.PI - 0.1, ENGINE.camTarget.phi - dy * 0.005));
+     ENGINE.camTarget.phi = Math.max(-0.5, Math.min(1.2, ENGINE.camTarget.phi - dy * 0.005));
     });
     
     document.addEventListener('mouseup', () => ENGINE.mouse.isDown = false);
@@ -526,37 +526,33 @@ function updateShipPhysics(dt) {
         PLAYER.mesh.quaternion.slerp(dummyObj.quaternion, 0.15);
     }
 
-    // --- 2. TIGHT 3D CHASE CAMERA ---
+   // --- 2. SHIP-RELATIVE CHASE CAMERA ---
+ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
+ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
+ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
 
-    ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
-    ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
-    ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
+const up = SHIP_STATE.pos.clone().normalize();
+const forward = SHIP_STATE.vel.clone().normalize();
+if (forward.lengthSq() === 0) forward.set(1, 0, 0);
 
-    const up = SHIP_STATE.pos.clone().normalize();
-    const shipForward = SHIP_STATE.vel.clone().normalize();
-    if (shipForward.lengthSq() === 0) shipForward.set(1, 0, 0);
+let right = forward.clone().cross(up);
+if (right.lengthSq() < 0.001) right.set(1, 0, 0).cross(up);
+right.normalize();
 
-    // FIX 2: Safely calculate shipRight to prevent NaN corruption
-    let shipRight = shipForward.clone().cross(up);
-    if (shipRight.lengthSq() < 0.001) {
-        // If falling straight down, force a safe right vector
-        shipRight.set(1, 0, 0).cross(up).normalize(); 
-    } else {
-        shipRight.normalize();
-    }
+const trueUp = right.clone().cross(forward).normalize();
 
-    const r = ENGINE.camCurrent.radius;
-    const xOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);
-    const yOffset = r * Math.cos(ENGINE.camCurrent.phi);
-    const zOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.sin(ENGINE.camCurrent.theta);
+// Base offset: behind and slightly above in ship-local space
+const r = ENGINE.camCurrent.radius;
+let camOffset = forward.clone().multiplyScalar(-r)
+    .add(trueUp.clone().multiplyScalar(r * 0.35));
 
-    const idealCamPos = SHIP_STATE.pos.clone()
-        .add(shipRight.clone().multiplyScalar(xOffset))
-        .add(up.clone().multiplyScalar(yOffset))
-        .add(shipForward.clone().multiplyScalar(-zOffset)); 
+// Apply mouse yaw (around trueUp) and pitch (around right)
+camOffset.applyAxisAngle(trueUp, ENGINE.camCurrent.theta);
+camOffset.applyAxisAngle(right, ENGINE.camCurrent.phi);
 
-    ENGINE.camera.position.lerp(idealCamPos, 0.25); 
-    ENGINE.camera.lookAt(SHIP_STATE.pos);
+const idealCamPos = SHIP_STATE.pos.clone().add(camOffset);
+ENGINE.camera.position.lerp(idealCamPos, 0.08);
+ENGINE.camera.lookAt(SHIP_STATE.pos);
 
     // --- RADAR UI ---
     const radarShip = document.getElementById('radar-ship');

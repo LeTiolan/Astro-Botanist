@@ -343,7 +343,7 @@ function buildPlayer() {
 // --- 7. INPUT HANDLING ---
 function bindInputs() {
     // Keyboard Controls
-    document.addEventListener('keydown', (e) => {
+   document.addEventListener('keydown', (e) => {
         if (e.key.toLowerCase() === 'w') ENGINE.keys.w = true;
         if (e.key.toLowerCase() === 's') ENGINE.keys.s = true;
         if (e.code === 'Space') {
@@ -351,6 +351,7 @@ function bindInputs() {
             if (ENGINE.state === 'START') {
                 UI.switchScreen('hud');
                 ENGINE.state = 'PLAY';
+                ENGINE.keys.spaceLocked = true; // <-- FIX IS ADDED HERE
             }
         }
     });
@@ -809,6 +810,8 @@ function triggerGameOver(title, desc, color) {
 }
 
 function triggerWin() {
+    if (ENGINE.state === 'WIN') return; // <-- FIX: Prevents multiple seeds from breaking the camera!
+    
     ENGINE.state = 'WIN';
     UI.switchScreen('win');
     
@@ -819,7 +822,6 @@ function triggerWin() {
     }, 16);
     setTimeout(() => clearInterval(zoomOut), 5000);
 }
-
 // --- 13. MAIN RENDER LOOP ---
 function animate() {
     requestAnimationFrame(animate);

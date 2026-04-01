@@ -683,12 +683,6 @@ if (radarOrbit) {
     radarOrbit.style.width = `${orbitPx}px`;
     radarOrbit.style.height = `${orbitPx}px`;
 }
-const radarOrbit = document.getElementById('radar-orbit');
-if (radarOrbit) {
-    const orbitRadius = SHIP_STATE.pos.length() * radarScale;
-    radarOrbit.style.width = `${orbitRadius * 2}px`;
-    radarOrbit.style.height = `${orbitRadius * 2}px`;
-}
 
     if (dist < CONFIG.planetRadius + 1) triggerGameOver("ORBIT DECAYED", "Ship collided with the planetary surface.", "var(--neon-purple)");
     if (dist > 300) triggerGameOver("LOST IN SPACE", "Escaped planetary gravity well.", "var(--neon-purple)");

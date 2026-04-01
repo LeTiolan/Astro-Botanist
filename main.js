@@ -25,7 +25,7 @@ const ENGINE = {
     renderer: null,
     clock: new THREE.Clock(),
     state: 'START', // START, PLAY, WIN, OVER
-    keys: { w: false, s: false, space: false, spaceLocked: false },
+    keys: { w: false, s: false, a: false, d: false, q: false, e: false, space: false, spaceLocked: false },
     // NEW: Mouse and Camera tracking
     mouse: { isDown: false, lastX: 0, lastY: 0 },
 camTarget: { theta: 0, phi: 0.2, radius: 20 },
@@ -345,8 +345,12 @@ function buildPlayer() {
 function bindInputs() {
     // Keyboard Controls
    document.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 'w') ENGINE.keys.w = true;
-        if (e.key.toLowerCase() === 's') ENGINE.keys.s = true;
+      if (e.key.toLowerCase() === 'w') ENGINE.keys.w = true;
+if (e.key.toLowerCase() === 's') ENGINE.keys.s = true;
+if (e.key.toLowerCase() === 'a') ENGINE.keys.a = true;
+if (e.key.toLowerCase() === 'd') ENGINE.keys.d = true;
+if (e.key.toLowerCase() === 'q') ENGINE.keys.q = true;
+if (e.key.toLowerCase() === 'e') ENGINE.keys.e = true;
         if (e.code === 'Space') {
             ENGINE.keys.space = true;
             if (ENGINE.state === 'START') {
@@ -358,8 +362,12 @@ function bindInputs() {
     });
 
     document.addEventListener('keyup', (e) => {
-        if (e.key.toLowerCase() === 'w') ENGINE.keys.w = false;
-        if (e.key.toLowerCase() === 's') ENGINE.keys.s = false;
+      if (e.key.toLowerCase() === 'w') ENGINE.keys.w = false;
+if (e.key.toLowerCase() === 's') ENGINE.keys.s = false;
+if (e.key.toLowerCase() === 'a') ENGINE.keys.a = false;
+if (e.key.toLowerCase() === 'd') ENGINE.keys.d = false;
+if (e.key.toLowerCase() === 'q') ENGINE.keys.q = false;
+if (e.key.toLowerCase() === 'e') ENGINE.keys.e = false;
         if (e.code === 'Space') {
             ENGINE.keys.space = false;
             ENGINE.keys.spaceLocked = false;
@@ -493,17 +501,35 @@ SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().m
         const gravityDir = SHIP_STATE.pos.clone().normalize().negate();
         const acceleration = gravityDir.clone().multiplyScalar(gravityForce);
 
-        const progradeDir = SHIP_STATE.vel.clone().normalize();
-        const thrustPower = 15.0;
+       const progradeDir = SHIP_STATE.vel.clone().normalize();
+const radialDir = SHIP_STATE.pos.clone().normalize();
+const normalDir = progradeDir.clone().cross(radialDir).normalize();
+const thrustPower = 15.0;
 
-        if (ENGINE.keys.w) {
-            acceleration.add(progradeDir.clone().multiplyScalar(thrustPower));
-            if (typeof spawnEngineParticles === 'function') spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone().negate());
-        }
-        if (ENGINE.keys.s) {
-            acceleration.add(progradeDir.clone().multiplyScalar(-thrustPower));
-            if (typeof spawnEngineParticles === 'function') spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone());
-        }
+if (ENGINE.keys.w) {
+    acceleration.add(progradeDir.clone().multiplyScalar(thrustPower));
+    spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone().negate());
+}
+if (ENGINE.keys.s) {
+    acceleration.add(progradeDir.clone().multiplyScalar(-thrustPower));
+    spawnEngineParticles(SHIP_STATE.pos, progradeDir.clone());
+}
+if (ENGINE.keys.a) {
+    acceleration.add(normalDir.clone().multiplyScalar(thrustPower));
+    spawnEngineParticles(SHIP_STATE.pos, normalDir.clone().negate());
+}
+if (ENGINE.keys.d) {
+    acceleration.add(normalDir.clone().multiplyScalar(-thrustPower));
+    spawnEngineParticles(SHIP_STATE.pos, normalDir.clone());
+}
+if (ENGINE.keys.q) {
+    acceleration.add(radialDir.clone().multiplyScalar(-thrustPower));
+    spawnEngineParticles(SHIP_STATE.pos, radialDir.clone());
+}
+if (ENGINE.keys.e) {
+    acceleration.add(radialDir.clone().multiplyScalar(thrustPower));
+    spawnEngineParticles(SHIP_STATE.pos, radialDir.clone().negate());
+}
 
         SHIP_STATE.vel.add(acceleration.clone().multiplyScalar(dt));
         SHIP_STATE.pos.add(SHIP_STATE.vel.clone().multiplyScalar(dt));

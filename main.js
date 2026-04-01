@@ -428,9 +428,19 @@ function toggleOrbitLock() {
 function updateShipPhysics(dt) {
     if (ENGINE.state !== 'PLAY') return;
 
+    // FIX 1: Safely inject camera config if it is missing from the 40kb file
+    if (!ENGINE.camTarget) {
+        ENGINE.camTarget = { theta: Math.PI/2, phi: Math.PI/2.5, radius: 12 };
+        ENGINE.camCurrent = { theta: Math.PI/2, phi: Math.PI/2.5, radius: 12 };
+    }
+
     // --- ONE-TIME SPAWN SETUP ---
     if (!PLAYER.hasSpawned) {
         PLAYER.hasSpawned = true;
+        
+        // Safety check against zero velocity on spawn
+        if (SHIP_STATE.vel.lengthSq() === 0) SHIP_STATE.vel.set(10, 0, 0); 
+        
         const radius = SHIP_STATE.pos.length();
         PLAYER.angularVelocity = SHIP_STATE.vel.length() / radius;
         PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
@@ -448,7 +458,6 @@ function updateShipPhysics(dt) {
         // SNAP CAMERA TO SHIP
         const startUp = SHIP_STATE.pos.clone().normalize();
         const startFwd = SHIP_STATE.vel.clone().normalize();
-        if (startFwd.lengthSq() === 0) startFwd.set(1, 0, 0);
         ENGINE.camera.position.copy(SHIP_STATE.pos.clone().add(startUp.clone().multiplyScalar(6)).add(startFwd.clone().multiplyScalar(-19)));
         ENGINE.camera.lookAt(SHIP_STATE.pos);
     }
@@ -462,7 +471,8 @@ function updateShipPhysics(dt) {
         SHIP_STATE.vel.applyAxisAngle(PLAYER.orbitAxis, PLAYER.angularVelocity * dt);
         PLAYER.velocity = SHIP_STATE.vel.length();
         
-        PLAYER.trail.visible = false; 
+        // FIX 3: Check if trail exists before hiding it
+        if (PLAYER.trail) PLAYER.trail.visible = false; 
         
         const statusTxt = document.getElementById('txt-orbit-status');
         if (statusTxt) {
@@ -471,7 +481,7 @@ function updateShipPhysics(dt) {
         }
         
     } else {
-        PLAYER.trail.visible = true;
+        if (PLAYER.trail) PLAYER.trail.visible = true;
         const gravityForce = CONFIG.gravity / distSq;
         const gravityDir = SHIP_STATE.pos.clone().normalize().negate();
         const acceleration = gravityDir.clone().multiplyScalar(gravityForce);
@@ -496,17 +506,19 @@ function updateShipPhysics(dt) {
     }
 
     // --- 1. ROBUST MESH ORIENTATION ---
-    PLAYER.mesh.position.copy(SHIP_STATE.pos);
-    const up = SHIP_STATE.pos.clone().normalize();
-    const shipForward = SHIP_STATE.vel.clone().normalize();
-    
-    if (shipForward.lengthSq() === 0) shipForward.set(1, 0, 0);
-    
-    const dummyObj = new THREE.Object3D();
-    dummyObj.position.copy(SHIP_STATE.pos);
-    dummyObj.up.copy(up);
-    dummyObj.lookAt(SHIP_STATE.pos.clone().add(shipForward.clone().multiplyScalar(10)));
-    PLAYER.mesh.quaternion.slerp(dummyObj.quaternion, 0.15);
+    if (PLAYER.mesh) {
+        PLAYER.mesh.position.copy(SHIP_STATE.pos);
+        const up = SHIP_STATE.pos.clone().normalize();
+        const shipForward = SHIP_STATE.vel.clone().normalize();
+        
+        if (shipForward.lengthSq() === 0) shipForward.set(1, 0, 0);
+        
+        const dummyObj = new THREE.Object3D();
+        dummyObj.position.copy(SHIP_STATE.pos);
+        dummyObj.up.copy(up);
+        dummyObj.lookAt(SHIP_STATE.pos.clone().add(shipForward.clone().multiplyScalar(10)));
+        PLAYER.mesh.quaternion.slerp(dummyObj.quaternion, 0.15);
+    }
 
     // --- 2. TIGHT 3D CHASE CAMERA ---
     if (ENGINE.camTarget.radius > 15) {
@@ -517,7 +529,18 @@ function updateShipPhysics(dt) {
     ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;
     ENGINE.camCurrent.radius += (ENGINE.camTarget.radius - ENGINE.camCurrent.radius) * 0.1;
 
-    const shipRight = shipForward.clone().cross(up).normalize();
+    const up = SHIP_STATE.pos.clone().normalize();
+    const shipForward = SHIP_STATE.vel.clone().normalize();
+    if (shipForward.lengthSq() === 0) shipForward.set(1, 0, 0);
+
+    // FIX 2: Safely calculate shipRight to prevent NaN corruption
+    let shipRight = shipForward.clone().cross(up);
+    if (shipRight.lengthSq() < 0.001) {
+        // If falling straight down, force a safe right vector
+        shipRight.set(1, 0, 0).cross(up).normalize(); 
+    } else {
+        shipRight.normalize();
+    }
 
     const r = ENGINE.camCurrent.radius;
     const xOffset = r * Math.sin(ENGINE.camCurrent.phi) * Math.cos(ENGINE.camCurrent.theta);

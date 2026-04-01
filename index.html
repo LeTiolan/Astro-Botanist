@@ -71,25 +71,35 @@
                     </div>
                 </div>
 
-               <div class="hud-cluster top-right">
-    <div class="glass-panel hyper-round radar-container">
-        <div class="radar-screen">
-            <div class="radar-planet"></div>
-            <div id="radar-ship" class="radar-blip"></div>
-        </div>
-    </div>
-    
-    <button id="btn-lock" class="pill-btn secondary-pill hover-scale hidden mt-10">
-        <span>LOCK ORBIT (L)</span>
-    </button>
-    
-    <div class="glass-pill telemetry-pill mt-10">
-        <div class="telemetry-data">
-            <span class="label">ORBIT STATUS</span>
-            <span id="txt-orbit-status" class="value-text" style="color: var(--neon-purple);">UNSTABLE</span>
-        </div>
-    </div>
-</div>
+<div class="hud-cluster top-right">
+                    <div class="glass-panel hyper-round radar-container">
+                        <div class="radar-screen">
+                            <div class="radar-planet"></div>
+                            <div id="radar-ship" class="radar-blip"></div>
+                        </div>
+                    </div>
+                    
+                    <button id="btn-lock" class="pill-btn secondary-pill hover-scale hidden mt-10">
+                        <span>LOCK ORBIT (L)</span>
+                    </button>
+                    
+                    <div class="glass-pill telemetry-pill mt-10">
+                        <div class="telemetry-data">
+                            <span class="label">VELOCITY</span>
+                            <span id="txt-vel" class="value-text">0.00 km/s</span>
+                        </div>
+                        <div class="separator" style="height: 30px;"></div>
+                        <div class="telemetry-data">
+                            <span class="label">ALTITUDE</span>
+                            <span id="txt-alt" class="value-text">0.0 km</span>
+                        </div>
+                        <div class="separator" style="height: 30px;"></div>
+                        <div class="telemetry-data">
+                            <span class="label">ORBIT STATUS</span>
+                            <span id="txt-orbit-status" class="value-text" style="color: var(--neon-purple);">UNSTABLE</span>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="hud-cluster bottom-center">
                     <div class="glass-pill controls-pill">

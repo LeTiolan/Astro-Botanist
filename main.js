@@ -114,8 +114,8 @@ const UI = {
         });
 
         // Touch/Mouse binding for the fire button
-        this.buttons.fire.addEventListener('mousedown', () => ENGINE.keys.space = true);
-        this.buttons.fire.addEventListener('mouseup', () => ENGINE.keys.space = false);
+      this.buttons.fire.addEventListener('mousedown', () => { ENGINE.keys.space = true; ENGINE.keys.spaceLocked = false; });
+this.buttons.fire.addEventListener('mouseup', () => { ENGINE.keys.space = false; ENGINE.keys.spaceLocked = false; });
         this.buttons.fire.addEventListener('touchstart', (e) => { e.preventDefault(); ENGINE.keys.space = true; });
         this.buttons.fire.addEventListener('touchend', (e) => { e.preventDefault(); ENGINE.keys.space = false; });
     },

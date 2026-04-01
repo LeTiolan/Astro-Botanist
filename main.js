@@ -322,6 +322,7 @@ ENGINE.scene.add(makeStarLayer(3000, 1200, 120, 0.7, 0xfff5cc, 0.5));
 ENGINE.scene.add(makeStarLayer(400, 800, 100, 1.8, 0xffffff, 0.9));
 // Layer 4: Rare blue giants
 ENGINE.scene.add(makeStarLayer(80, 900, 100, 3.0, 0x99ccff, 1.0));
+  }
 
 // --- 6. PLAYER/ORBITER BUILDING ---
 function buildPlayer() {

@@ -103,15 +103,15 @@ const UI = {
         });
 
         // --- NEW: Orbital Lock Listeners ---
-        this.buttons.lock.addEventListener('click', () => {
-            if (typeof toggleOrbitLock === "function") toggleOrbitLock();
-        });
+      this.buttons.lock.addEventListener('click', () => {
+    toggleOrbitLock();
+});
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key.toLowerCase() === 'l') {
-                if (typeof toggleOrbitLock === "function") toggleOrbitLock();
-            }
-        });
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'l') {
+        toggleOrbitLock();
+    }
+});
 
         // Touch/Mouse binding for the fire button
       this.buttons.fire.addEventListener('mousedown', () => { ENGINE.keys.space = true; ENGINE.keys.spaceLocked = false; });
@@ -171,10 +171,9 @@ class SimpleNoise {
     }
     // Simple 3D noise approximation mapping a vector to a scalar
     noise3D(x, y, z) {
-        const n = x * 12.9898 + y * 78.233 + z * 37.719;
-        this.seed = n;
-        return this.random();
-    }
+    const n = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 10000;
+    return n - Math.floor(n);
+}
 }
 const terrainNoise = new SimpleNoise();
 
@@ -528,9 +527,6 @@ function updateShipPhysics(dt) {
     }
 
     // --- 2. TIGHT 3D CHASE CAMERA ---
-    if (ENGINE.camTarget.radius > 15) {
-        ENGINE.camTarget.radius = 12; 
-    }
 
     ENGINE.camCurrent.theta += (ENGINE.camTarget.theta - ENGINE.camCurrent.theta) * 0.1;
     ENGINE.camCurrent.phi += (ENGINE.camTarget.phi - ENGINE.camCurrent.phi) * 0.1;

@@ -414,8 +414,10 @@ function toggleOrbitLock() {
     const btn = document.getElementById('btn-lock');
     
     if (PLAYER.isLocked) {
-        btn.classList.add('btn-locked');
-        btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
+        if (btn) {
+            btn.classList.add('btn-locked');
+            btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
+        }
         
         const radius = SHIP_STATE.pos.length();
         PLAYER.angularVelocity = SHIP_STATE.vel.length() / radius;
@@ -423,8 +425,10 @@ function toggleOrbitLock() {
         SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(SHIP_STATE.vel.length()));
         
     } else {
-        btn.classList.remove('btn-locked');
-        btn.innerHTML = '<span>LOCK ORBIT (L)</span>';
+        if (btn) {
+            btn.classList.remove('btn-locked');
+            btn.innerHTML = '<span>LOCK ORBIT (L)</span>';
+        }
     }
 }
 

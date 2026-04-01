@@ -386,8 +386,7 @@ function bindInputs() {
         
         // Rotate horizontally
         ENGINE.camTarget.theta -= dx * 0.005;
-        // Rotate vertically (clamped to prevent flipping upside down)
-     ENGINE.camTarget.phi = Math.max(-0.5, Math.min(1.2, ENGINE.camTarget.phi - dy * 0.005));
+      ENGINE.camTarget.phi -= dy * 0.005;
     });
     
     document.addEventListener('mouseup', () => ENGINE.mouse.isDown = false);
@@ -403,7 +402,7 @@ document.addEventListener('wheel', (e) => {
 // --- 8. ORBITAL PHYSICS ENGINE ---
 const SHIP_STATE = {
     pos: new THREE.Vector3(0, CONFIG.planetRadius + 40, 0),
-    vel: new THREE.Vector3(CONFIG.gravity / Math.sqrt(CONFIG.planetRadius + 40) * 0.15, 0, 0)
+    vel: new THREE.Vector3(Math.sqrt(CONFIG.gravity / (CONFIG.planetRadius + 40)), 0, 0)
 };
 
 function toggleOrbitLock() {
@@ -418,10 +417,11 @@ function toggleOrbitLock() {
             btn.innerHTML = '<span>UNLOCK ORBIT (L)</span>';
         }
         
-        const radius = SHIP_STATE.pos.length();
-        PLAYER.angularVelocity = SHIP_STATE.vel.length() / radius;
-        PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
-        SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(SHIP_STATE.vel.length()));
+       const radius = SHIP_STATE.pos.length();
+const circularSpeed = Math.sqrt(CONFIG.gravity / radius);
+PLAYER.angularVelocity = circularSpeed / radius;
+PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
+SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(circularSpeed));
         
     } else {
         if (btn) {
@@ -447,10 +447,11 @@ function updateShipPhysics(dt) {
         // Safety check against zero velocity on spawn
         if (SHIP_STATE.vel.lengthSq() === 0) SHIP_STATE.vel.set(10, 0, 0); 
         
-        const radius = SHIP_STATE.pos.length();
-        PLAYER.angularVelocity = SHIP_STATE.vel.length() / radius;
-        PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
-        SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(SHIP_STATE.vel.length()));
+     const radius = SHIP_STATE.pos.length();
+const circularSpeed = Math.sqrt(CONFIG.gravity / radius);
+PLAYER.angularVelocity = circularSpeed / radius;
+PLAYER.orbitAxis = SHIP_STATE.pos.clone().cross(SHIP_STATE.vel).normalize();
+SHIP_STATE.vel.copy(PLAYER.orbitAxis.clone().cross(SHIP_STATE.pos).normalize().multiplyScalar(circularSpeed));
         
         PLAYER.isLocked = true;
         PLAYER.canLock = true;
@@ -547,6 +548,8 @@ let camOffset = forward.clone().multiplyScalar(-r)
     .add(trueUp.clone().multiplyScalar(r * 0.35));
 
 // Apply mouse yaw (around trueUp) and pitch (around right)
+// Wrap theta to prevent float overflow on long sessions
+ENGINE.camCurrent.theta = ENGINE.camCurrent.theta % (Math.PI * 2);
 camOffset.applyAxisAngle(trueUp, ENGINE.camCurrent.theta);
 camOffset.applyAxisAngle(right, ENGINE.camCurrent.phi);
 

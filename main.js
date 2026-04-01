@@ -560,11 +560,17 @@ function updateShipPhysics(dt) {
 
     // --- RADAR UI ---
     const radarShip = document.getElementById('radar-ship');
-    if (radarShip) {
-        const radarScale = 75 / 150; 
-        radarShip.style.left = `calc(50% + ${SHIP_STATE.pos.x * radarScale}px)`;
-        radarShip.style.top = `calc(50% + ${SHIP_STATE.pos.z * radarScale}px)`;
-    }
+   const radarScale = 0.5;
+if (radarShip) {
+    radarShip.style.left = `calc(50% + ${SHIP_STATE.pos.x * radarScale}px)`;
+    radarShip.style.top = `calc(50% + ${SHIP_STATE.pos.z * radarScale}px)`;
+}
+const radarOrbit = document.getElementById('radar-orbit');
+if (radarOrbit) {
+    const orbitRadius = SHIP_STATE.pos.length() * radarScale;
+    radarOrbit.style.width = `${orbitRadius * 2}px`;
+    radarOrbit.style.height = `${orbitRadius * 2}px`;
+}
 
     if (dist < CONFIG.planetRadius + 1) triggerGameOver("ORBIT DECAYED", "Ship collided with the planetary surface.", "var(--neon-purple)");
     if (dist > 300) triggerGameOver("LOST IN SPACE", "Escaped planetary gravity well.", "var(--neon-purple)");

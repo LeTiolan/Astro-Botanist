@@ -557,12 +557,28 @@ const idealCamPos = SHIP_STATE.pos.clone().add(camOffset);
 ENGINE.camera.position.lerp(idealCamPos, 0.08);
 ENGINE.camera.lookAt(SHIP_STATE.pos);
 
-    // --- RADAR UI ---
-    const radarShip = document.getElementById('radar-ship');
-   const radarScale = 0.5;
+  // --- RADAR UI ---
+const orbitDist = SHIP_STATE.pos.length();
+const radarScale = 68 / Math.max(orbitDist * 1.1, CONFIG.planetRadius * 2);
+
+const radarPlanet = document.getElementById('radar-planet');
+if (radarPlanet) {
+    const planetPx = CONFIG.planetRadius * radarScale * 2;
+    radarPlanet.style.width = `${planetPx}px`;
+    radarPlanet.style.height = `${planetPx}px`;
+}
+
+const radarShip = document.getElementById('radar-ship');
 if (radarShip) {
     radarShip.style.left = `calc(50% + ${SHIP_STATE.pos.x * radarScale}px)`;
     radarShip.style.top = `calc(50% + ${SHIP_STATE.pos.z * radarScale}px)`;
+}
+
+const radarOrbit = document.getElementById('radar-orbit');
+if (radarOrbit) {
+    const orbitPx = orbitDist * radarScale * 2;
+    radarOrbit.style.width = `${orbitPx}px`;
+    radarOrbit.style.height = `${orbitPx}px`;
 }
 const radarOrbit = document.getElementById('radar-orbit');
 if (radarOrbit) {
